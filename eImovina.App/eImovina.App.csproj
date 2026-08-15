@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MudBlazor" Version="9.8.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\eImovina.Shared\eImovina.Shared.csproj" />
   </ItemGroup>
 
