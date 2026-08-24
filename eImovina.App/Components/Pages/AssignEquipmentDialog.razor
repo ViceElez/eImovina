@@ -1,0 +1,48 @@
+@using eImovina.Shared.DTOs
+@using eImovina.Shared.DTOs.Equipments
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<MudDialog>
+    <DialogContent>
+        <MudSelect T="int" @bind-Value="employeeId" Label="Zaposlenik" Required="true" Variant="Variant.Outlined">
+            @foreach (var e in employees)
+            {
+                <MudSelectItem T="int" Value="@e.Id">@e.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudTextField @bind-Value="note" Label="Napomena" Class="mt-3" Lines="2" Variant="Variant.Outlined" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Odustani</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Zaduži</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public int EquipmentId { get; set; }
+
+    private List<LookUpDto> employees = new();
+    private int employeeId;
+    private string? note;
+
+    protected override async Task OnInitializedAsync()
+    {
+        employees = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/employees") ?? new();
+    }
+
+    private async Task Submit()
+    {
+        var response = await Http.PostAsJsonAsync("api/assignments/assign", new AssignEquipmentDto
+        {
+            EquipmentId = EquipmentId,
+            EmployeeId = employeeId,
+            Note = note
+        });
+
+        MudDialog.Close(response.IsSuccessStatusCode ? DialogResult.Ok(true) : DialogResult.Cancel());
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -1,0 +1,33 @@
+@page "/my-equipment"
+@rendermode InteractiveServer
+@using eImovina.Shared.DTOs.Equipments
+@using System.Net.Http.Json
+@attribute [Authorize(Roles = "Employee,Admin,InventoryManager,LocationResponsible")]
+@inject HttpClient Http
+
+<MudText Typo="Typo.h4" GutterBottom="true">Moja oprema</MudText>
+
+<MudTable Items="@myAssignments" Hover="true" Striped="true" Dense="true">
+    <HeaderContent>
+        <MudTh>Inv. broj</MudTh>
+        <MudTh>Naziv</MudTh>
+        <MudTh>Zaduženo od</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Inv. broj">@context.InventoryNumber</MudTd>
+        <MudTd DataLabel="Naziv">@context.Equipment</MudTd>
+        <MudTd DataLabel="Zaduženo od">@context.AssignedAt.ToShortDateString()</MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Class="pa-4">Trenutačno nemate zaduženu opremu.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<EquipmentAssignmentDto> myAssignments = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        myAssignments = await Http.GetFromJsonAsync<List<EquipmentAssignmentDto>>("api/assignments/mine") ?? new();
+    }
+}

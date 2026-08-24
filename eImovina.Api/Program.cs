@@ -18,34 +18,34 @@ builder.Services.AddDbContext<eImovinaDbContext>(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
-var jwtOptions = jwtSection.Get<JwtOptions>()
-    ?? throw new InvalidOperationException("Nedostaje Jwt konfiguracija.");
+//var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
+//var jwtOptions = jwtSection.Get<JwtOptions>()
+//    ?? throw new InvalidOperationException("Nedostaje Jwt konfiguracija.");
 
-if (jwtOptions.SigningKey.Length < 32)
-    throw new InvalidOperationException(
-        "Jwt:SigningKey mora imati najmanje 32 znaka.");
+//if (jwtOptions.SigningKey.Length < 32)
+//    throw new InvalidOperationException(
+//        "Jwt:SigningKey mora imati najmanje 32 znaka.");
 
-builder.Services.Configure<JwtOptions>(jwtSection);
-builder.Services.AddScoped<JwtTokenService>();
+//builder.Services.Configure<JwtOptions>(jwtSection);
+//builder.Services.AddScoped<JwtTokenService>();
 
-builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = jwtOptions.Issuer,
-            ValidateAudience = true,
-            ValidAudience = jwtOptions.Audience,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromSeconds(30)
-        };
-    });
+//builder.Services
+//    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+//    .AddJwtBearer(options =>
+//    {
+//        options.TokenValidationParameters = new TokenValidationParameters
+//        {
+//            ValidateIssuer = true,
+//            ValidIssuer = jwtOptions.Issuer,
+//            ValidateAudience = true,
+//            ValidAudience = jwtOptions.Audience,
+//            ValidateIssuerSigningKey = true,
+//            IssuerSigningKey = new SymmetricSecurityKey(
+//                Encoding.UTF8.GetBytes(jwtOptions.SigningKey)),
+//            ValidateLifetime = true,
+//            ClockSkew = TimeSpan.FromSeconds(30)
+//        };
+//    });
 
 //builder.Services.AddAuthorization(options =>
 //{
@@ -75,8 +75,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseStaticFiles();
 app.UseHttpsRedirection();
-app.UseAuthentication();
-app.UseAuthorization();
+//app.UseAuthentication();
+//app.UseAuthorization();
 app.MapControllers();
     
 app.Run();

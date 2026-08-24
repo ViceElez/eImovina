@@ -1,0 +1,177 @@
+@page "/equipment/{Id:int}"
+@rendermode InteractiveServer
+@using eImovina.Shared.DTOs.Equipments
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+@if (profile is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+        <MudText Typo="Typo.h4">@profile.Equipment.Name</MudText>
+        <MudChip T="string" Color="@GetStatusColor(profile.Equipment.Status)" Size="Size.Large">
+            @profile.Equipment.Status
+        </MudChip>
+    </MudStack>
+
+    <MudGrid>
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.subtitle2">Inventurni broj</MudText>
+                <MudText Class="mb-2">@profile.Equipment.InventoryNumber</MudText>
+
+                <MudText Typo="Typo.subtitle2">Serijski broj</MudText>
+                <MudText Class="mb-2">@(profile.Equipment.SerialNumber ?? "-")</MudText>
+
+                <MudText Typo="Typo.subtitle2">Kategorija</MudText>
+                <MudText Class="mb-2">@profile.Equipment.Category</MudText>
+
+                <MudText Typo="Typo.subtitle2">Lokacija</MudText>
+                <MudText Class="mb-2">@profile.Equipment.CurrentLocation</MudText>
+
+                <MudText Typo="Typo.subtitle2">Trenutačno zaduženo na</MudText>
+                <MudText Class="mb-2">@(profile.Equipment.AssignedTo ?? "Nije zaduženo")</MudText>
+
+                <MudDivider Class="my-3" />
+
+                @if (profile.Equipment.AssignedToEmployeeId is null)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" OnClick="OpenAssignDialog">
+                        Zaduži
+                    </MudButton>
+                }
+                else
+                {
+                    <MudStack Spacing="2">
+                        <MudButton Variant="Variant.Filled" Color="Color.Secondary" FullWidth="true" OnClick="OpenTransferDialog">
+                            Prenesi drugom zaposleniku
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Success" FullWidth="true" OnClick="ReturnEquipment">
+                            Zaprimi povrat
+                        </MudButton>
+                    </MudStack>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="8">
+            <MudTabs Elevation="1" Rounded="true">
+                <MudTabPanel Text="Povijest zaduženja">
+                    <MudTable Items="@profile.AssignmentHistory" Hover="true" Dense="true" Class="mt-2">
+                        <HeaderContent>
+                            <MudTh>Zaposlenik</MudTh>
+                            <MudTh>Status</MudTh>
+                            <MudTh>Zaduženo</MudTh>
+                            <MudTh>Vraćeno</MudTh>
+                            <MudTh>Zadužio</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="Zaposlenik">@context.Employee</MudTd>
+                            <MudTd DataLabel="Status">@context.Status</MudTd>
+                            <MudTd DataLabel="Zaduženo">@context.AssignedAt.ToShortDateString()</MudTd>
+                            <MudTd DataLabel="Vraćeno">@(context.ReturnedAt?.ToShortDateString() ?? "-")</MudTd>
+                            <MudTd DataLabel="Zadužio">@context.AssignedBy</MudTd>
+                        </RowTemplate>
+                        <NoRecordsContent>
+                            <MudText Class="pa-4">Oprema još nije bila zaduživana.</MudText>
+                        </NoRecordsContent>
+                    </MudTable>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Datoteke">
+                    <MudGrid Class="mt-2">
+                        @foreach (var file in profile.Files)
+                        {
+                            <MudItem xs="6" md="4">
+                                <MudPaper Class="pa-2 d-flex flex-column align-center">
+                                    @if (file.FileType == "Image")
+                                    {
+                                        <img src="@file.Url" style="width:100%;height:120px;object-fit:cover;" />
+                                    }
+                                    else
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.PictureAsPdf" Size="Size.Large" />
+                                    }
+                                    <MudText Typo="Typo.caption" Class="mt-1">@file.OriginalFileName</MudText>
+                                    <MudLink Href="@file.Url" Target="_blank">Preuzmi</MudLink>
+                                </MudPaper>
+                            </MudItem>
+                        }
+                        @if (!profile.Files.Any())
+                        {
+                            <MudText Class="pa-4">Nema dodanih datoteka.</MudText>
+                        }
+                    </MudGrid>
+                </MudTabPanel>
+            </MudTabs>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private EquipmentProfileDto? profile;
+
+    protected override async Task OnInitializedAsync() => await LoadProfile();
+
+    private async Task LoadProfile()
+    {
+        profile = await Http.GetFromJsonAsync<EquipmentProfileDto>($"api/equipment/{Id}/profile");
+    }
+
+    private async Task OpenAssignDialog()
+    {
+        var parameters = new DialogParameters { ["EquipmentId"] = Id };
+        var dialog = await DialogService.ShowAsync<AssignEquipmentDialog>("Zaduži opremu", parameters);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled)
+            await LoadProfile();
+    }
+
+    private async Task OpenTransferDialog()
+    {
+        var parameters = new DialogParameters { ["EquipmentId"] = Id };
+        var dialog = await DialogService.ShowAsync<TransferEquipmentDialog>("Prenesi opremu", parameters);
+        var result = await dialog.Result;
+        if (result is not null && !result.Canceled)
+            await LoadProfile();
+    }
+
+    private async Task ReturnEquipment()
+    {
+        var activeAssignment = profile!.AssignmentHistory.FirstOrDefault(a => a.Status == "Aktivno");
+        if (activeAssignment is null) return;
+
+        var response = await Http.PostAsJsonAsync("api/assignments/return", new ReturnEquipmentDto
+        {
+            AssignmentId = activeAssignment.Id
+        });
+
+        if (response.IsSuccessStatusCode)
+        {
+            Snackbar.Add("Oprema vraćena.", Severity.Success);
+            await LoadProfile();
+        }
+        else
+        {
+            Snackbar.Add("Greška prilikom povrata.", Severity.Error);
+        }
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Na skladištu" => Color.Info,
+        "Zaduženo" => Color.Success,
+        "Na servisu" => Color.Warning,
+        "Nedostaje" => Color.Error,
+        "Otpisano" => Color.Dark,
+        _ => Color.Default
+    };
+}

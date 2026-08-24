@@ -1,0 +1,226 @@
+@page "/equipment"
+@rendermode InteractiveServer
+@using eImovina.Shared.DTOs
+@using eImovina.Shared.DTOs.Equipments
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Components.Web
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<MudText Typo="Typo.h4" GutterBottom="true">Oprema</MudText>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/equipment/create" Class="mb-4">
+    Nova oprema
+</MudButton>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" md="3">
+            <MudTextField @bind-Value="searchText"
+                          Label="Pretraži opremu"
+                          Placeholder="Naziv, inventurni ili serijski broj"
+                          Variant="Variant.Outlined"
+                          Immediate="true"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          OnKeyUp="HandleSearchKeyUp" />
+        </MudItem>
+
+        <MudItem xs="12" md="3">
+            <MudSelect T="int?" Label="Kategorija" @bind-Value="categoryId" Variant="Variant.Outlined" Clearable="true">
+                @foreach (var c in categories)
+                {
+                    <MudSelectItem T="int?" Value="@((int?)c.Id)">@c.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="3">
+            <MudSelect T="int?" Label="Status" @bind-Value="statusId" Variant="Variant.Outlined" Clearable="true">
+                @foreach (var s in statuses)
+                {
+                    <MudSelectItem T="int?" Value="@((int?)s.Id)">@s.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" md="3">
+            <MudSelect T="int?" Label="Lokacija" @bind-Value="locationId" Variant="Variant.Outlined" Clearable="true">
+                @foreach (var l in locations)
+                {
+                    <MudSelectItem T="int?" Value="@((int?)l.Id)">@l.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+
+        <MudItem xs="12" Class="d-flex gap-2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="ApplyFilters">
+                Primijeni
+            </MudButton>
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       StartIcon="@Icons.Material.Filled.Refresh"
+                       OnClick="ResetFilters">
+                Očisti
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTable @ref="table"
+          ServerData="ServerReload"
+          Hover="true"
+          Striped="true"
+          Bordered="true"
+          Dense="true"
+          OnRowClick="@((TableRowClickEventArgs<EquipmentDto> args) => Navigation.NavigateTo($"/equipment/{args.Item!.Id}"))"
+          RowStyle="cursor: pointer;">
+    <HeaderContent>
+        <MudTh>Slika</MudTh>
+        <MudTh>
+            <MudTableSortLabel T="string" SortLabel="InventoryNumber">
+                Inv. broj
+            </MudTableSortLabel>
+        </MudTh>
+        <MudTh>
+            <MudTableSortLabel T="string" SortLabel="Name">
+                Naziv
+            </MudTableSortLabel>
+        </MudTh>
+        <MudTh>
+            <MudTableSortLabel T="string" SortLabel="Category">
+                Kategorija
+            </MudTableSortLabel>
+        </MudTh>
+        <MudTh>
+            <MudTableSortLabel T="string" SortLabel="Status">
+                Status
+            </MudTableSortLabel>
+        </MudTh>
+        <MudTh>
+            <MudTableSortLabel T="string" SortLabel="CurrentLocation">
+                Lokacija
+            </MudTableSortLabel>
+        </MudTh>
+        <MudTh>
+            <MudTableSortLabel T="string" SortLabel="AssignedTo">
+                Zaduženo na
+            </MudTableSortLabel>
+        </MudTh>
+        <MudTh>Akcije</MudTh>
+    </HeaderContent>
+
+    <RowTemplate>
+        <MudTd DataLabel="Slika">
+            <MudAvatar Size="Size.Large">
+                @if (!string.IsNullOrEmpty(context.CoverImageUrl))
+                {
+                    <img src="@context.CoverImageUrl" alt="@context.Name" style="width:100%;height:100%;object-fit:cover;" />
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" />
+                }
+            </MudAvatar>
+        </MudTd>
+        <MudTd DataLabel="Inv. broj">@context.InventoryNumber</MudTd>
+        <MudTd DataLabel="Naziv">@context.Name</MudTd>
+        <MudTd DataLabel="Kategorija">@context.Category</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Lokacija">@context.CurrentLocation</MudTd>
+        <MudTd DataLabel="Zaduženo na">@(context.AssignedTo ?? "-")</MudTd>
+        <MudTd DataLabel="Akcije">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                           Color="Color.Primary"
+                           Href="@($"/equipment/edit/{context.Id}")"
+                           title="Uredi"
+                           @onclick:stopPropagation="true" />
+            <MudIconButton Icon="@Icons.Material.Filled.Info"
+                           Color="Color.Default"
+                           Href="@($"/equipment/{context.Id}")"
+                           title="Profil opreme"
+                           @onclick:stopPropagation="true" />
+        </MudTd>
+    </RowTemplate>
+
+    <NoRecordsContent>
+        <MudText Typo="Typo.body1" Class="pa-4">Nema opreme za zadane kriterije.</MudText>
+    </NoRecordsContent>
+
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private MudTable<EquipmentDto> table = null!;
+
+    private List<LookUpDto> categories = new();
+    private List<LookUpDto> statuses = new();
+    private List<LookUpDto> locations = new();
+
+    private string? searchText;
+    private int? categoryId;
+    private int? statusId;
+    private int? locationId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/equipment-categories") ?? new();
+        statuses = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/equipment-statuses") ?? new();
+        locations = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/locations") ?? new();
+    }
+
+    private async Task<TableData<EquipmentDto>> ServerReload(TableState state, CancellationToken ct)
+    {
+        var filter = new EquipmentFilterDto
+        {
+            SearchText = searchText,
+            CategoryId = categoryId,
+            StatusId = statusId,
+            LocationId = locationId,
+            SortBy = state.SortLabel,
+            SortDescending = state.SortDirection == SortDirection.Descending,
+            Page = state.Page + 1,
+            PageSize = state.PageSize
+        };
+
+        var query = $"api/equipment?searchText={Uri.EscapeDataString(filter.SearchText ?? "")}" +
+                    $"&categoryId={filter.CategoryId}&statusId={filter.StatusId}&locationId={filter.LocationId}" +
+                    $"&sortBy={filter.SortBy}&sortDescending={filter.SortDescending}" +
+                    $"&page={filter.Page}&pageSize={filter.PageSize}";
+
+        var result = await Http.GetFromJsonAsync<PagedResult<EquipmentDto>>(query) ?? new();
+
+        return new TableData<EquipmentDto> { Items = result.Items, TotalItems = result.TotalCount };
+    }
+
+    private async Task ApplyFilters() => await table.ReloadServerData();
+
+    private async Task HandleSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await ApplyFilters();
+    }
+
+    private async Task ResetFilters()
+    {
+        searchText = null;
+        categoryId = null;
+        statusId = null;
+        locationId = null;
+        await table.ReloadServerData();
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Na skladištu" => Color.Info,
+        "Zaduženo" => Color.Success,
+        "Na servisu" => Color.Warning,
+        "Nedostaje" => Color.Error,
+        "Otpisano" => Color.Dark,
+        _ => Color.Default
+    };
+}
