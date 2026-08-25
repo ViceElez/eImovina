@@ -1,4 +1,3 @@
-@page "/equipment/create"
 @page "/equipment/edit/{Id:int}"
 @rendermode InteractiveServer
 @using eImovina.Shared.DTOs
@@ -6,130 +5,134 @@
 @using System.Net.Http.Json
 @inject HttpClient Http
 @inject NavigationManager Navigation
-@inject ISnackbar Snackbar
 
-<MudText Typo="Typo.h4" GutterBottom="true">@(Id.HasValue ? "Uredi opremu" : "Nova oprema")</MudText>
+<MudText Typo="Typo.h4" GutterBottom="true">Uredi opremu</MudText>
+<MudText Typo="Typo.body1" Class="mb-4">
+    Na ovoj stranici dohvaćamo postojeći zapis i spremamo promjene preko PUT zahtjeva.
+</MudText>
 
-<MudPaper Class="pa-6" MaxWidth="700px">
-    <MudForm @ref="form" Model="model">
-        <MudGrid>
-            <MudItem xs="12" md="6">
-                <MudTextField @bind-Value="model.InventoryNumber" Label="Inventurni broj" Required="true" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" md="6">
-                <MudTextField @bind-Value="model.SerialNumber" Label="Serijski broj" Variant="Variant.Outlined" />
-            </MudItem>
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">
+        @errorMessage
+    </MudAlert>
+}
 
-            <MudItem xs="12">
-                <MudTextField @bind-Value="model.Name" Label="Naziv" Required="true" Variant="Variant.Outlined" />
-            </MudItem>
+<MudForm @ref="form">
+    <MudStack Spacing="2">
+        <MudTextField @bind-Value="model.InventoryNumber" Label="Inventurni broj" Required="true" />
+        <MudTextField @bind-Value="model.SerialNumber" Label="Serijski broj" />
+        <MudTextField @bind-Value="model.Name" Label="Naziv" Required="true" />
 
-            <MudItem xs="12" md="6">
-                <MudSelect T="int" @bind-Value="model.CategoryId" Label="Kategorija" Required="true" Variant="Variant.Outlined">
-                    @foreach (var c in categories)
-                    {
-                        <MudSelectItem T="int" Value="@c.Id">@c.Name</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
+        <MudSelect T="int"
+                   Label="Kategorija"
+                   @bind-Value="model.CategoryId"
+                   Variant="Variant.Outlined"
+                   Required="true">
+            @foreach (var category in categoryList)
+            {
+                <MudSelectItem Value="@category.Id">@category.Name</MudSelectItem>
+            }
+        </MudSelect>
 
-            <MudItem xs="12" md="6">
-                <MudSelect T="int" @bind-Value="model.StatusId" Label="Status" Required="true" Variant="Variant.Outlined">
-                    @foreach (var s in statuses)
-                    {
-                        <MudSelectItem T="int" Value="@s.Id">@s.Name</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
+        <MudSelect T="int"
+                   Label="Status"
+                   @bind-Value="model.StatusId"
+                   Variant="Variant.Outlined"
+                   Required="true">
+            @foreach (var status in statusList)
+            {
+                <MudSelectItem Value="@status.Id">@status.Name</MudSelectItem>
+            }
+        </MudSelect>
 
-            <MudItem xs="12" md="6">
-                <MudSelect T="int" @bind-Value="model.CurrentLocationId" Label="Lokacija" Required="true" Variant="Variant.Outlined">
-                    @foreach (var l in locations)
-                    {
-                        <MudSelectItem T="int" Value="@l.Id">@l.Name</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
+        <MudSelect T="int"
+                   Label="Lokacija"
+                   @bind-Value="model.CurrentLocationId"
+                   Variant="Variant.Outlined"
+                   Required="true">
+            @foreach (var location in locationList)
+            {
+                <MudSelectItem Value="@location.Id">@location.Name</MudSelectItem>
+            }
+        </MudSelect>
 
-            <MudItem xs="12" md="6">
-                <MudNumericField @bind-Value="model.Value" Label="Nabavna vrijednost (€)" Variant="Variant.Outlined" />
-            </MudItem>
+        <MudNumericField @bind-Value="model.Value" Label="Nabavna vrijednost (€)" />
+        <MudDatePicker @bind-Date="purchaseDate" Label="Datum nabave" />
+        <MudTextField @bind-Value="model.Note" Label="Napomena" Lines="3" />
 
-            <MudItem xs="12" md="6">
-                <MudDatePicker @bind-Date="model.PurchaseDate" Label="Datum nabave" Variant="Variant.Outlined" />
-            </MudItem>
-
-            <MudItem xs="12">
-                <MudTextField @bind-Value="model.Note" Label="Napomena" Lines="3" Variant="Variant.Outlined" />
-            </MudItem>
-
-            <MudItem xs="12" Class="d-flex gap-2">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="Save">
-                    Spremi
-                </MudButton>
-                <MudButton Variant="Variant.Outlined" OnClick="@(() => Navigation.NavigateTo("/equipment"))">
-                    Odustani
-                </MudButton>
-            </MudItem>
-        </MudGrid>
-    </MudForm>
-</MudPaper>
+        <MudButton ButtonType="ButtonType.Button"
+                   OnClick="@UpdateEquipment"
+                   Variant="Variant.Filled"
+                   Color="Color.Primary">
+            Spremi promjene
+        </MudButton>
+    </MudStack>
+</MudForm>
 
 @code {
-    [Parameter] public int? Id { get; set; }
+    [Parameter] public int Id { get; set; }
 
-    private MudForm form = null!;
+    private MudForm? form;
     private SaveEquipmentDto model = new();
+    private DateTime? purchaseDate;
+    private string? errorMessage;
 
-    private List<LookUpDto> categories = new();
-    private List<LookUpDto> statuses = new();
-    private List<LookUpDto> locations = new();
+    private List<LookUpDto> categoryList = new();
+    private List<LookUpDto> statusList = new();
+    private List<LookUpDto> locationList = new();
 
     protected override async Task OnInitializedAsync()
     {
-        categories = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/equipment-categories") ?? new();
-        statuses = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/equipment-statuses") ?? new();
-        locations = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/locations") ?? new();
+        categoryList = await Http.GetFromJsonAsync<List<LookUpDto>>("api/equipmentcategories") ?? new();
+        statusList = await Http.GetFromJsonAsync<List<LookUpDto>>("api/equipmentstatuses") ?? new();
+        locationList = await Http.GetFromJsonAsync<List<LookUpDto>>("api/locations/lookup") ?? new();
 
-        if (Id.HasValue)
+        var equipment = await Http.GetFromJsonAsync<EquipmentDto>($"api/equipment/{Id}");
+
+        if (equipment is not null)
         {
-            var existing = await Http.GetFromJsonAsync<EquipmentDto>($"api/equipment/{Id}");
-            if (existing is not null)
+            model = new SaveEquipmentDto
             {
-                model = new SaveEquipmentDto
-                {
-                    InventoryNumber = existing.InventoryNumber,
-                    SerialNumber = existing.SerialNumber,
-                    Name = existing.Name,
-                    CategoryId = existing.CategoryId,
-                    StatusId = existing.StatusId,
-                    CurrentLocationId = existing.CurrentLocationId,
-                    Value = existing.Value,
-                    PurchaseDate = existing.PurchaseDate,
-                    Note = existing.Note
-                };
-            }
+                InventoryNumber = equipment.InventoryNumber,
+                SerialNumber = equipment.SerialNumber,
+                Name = equipment.Name,
+                CategoryId = equipment.CategoryId,
+                StatusId = equipment.StatusId,
+                CurrentLocationId = equipment.CurrentLocationId,
+                Value = equipment.Value,
+                PurchaseDate = equipment.PurchaseDate,
+                Note = equipment.Note
+            };
+
+            purchaseDate = equipment.PurchaseDate;
         }
     }
 
-    private async Task Save()
+    private async Task UpdateEquipment()
     {
-        await form.Validate();
-        if (!form.IsValid) return;
+        if (form is not null)
+        {
+            await form.ValidateAsync();
 
-        HttpResponseMessage response = Id.HasValue
-            ? await Http.PutAsJsonAsync($"api/equipment/{Id}", model)
-            : await Http.PostAsJsonAsync("api/equipment", model);
+            if (!form.IsValid)
+                return;
+        }
+
+        errorMessage = null;
+        model.PurchaseDate = purchaseDate;
+
+        var response = await Http.PutAsJsonAsync($"api/equipment/{Id}", model);
 
         if (response.IsSuccessStatusCode)
         {
-            Snackbar.Add("Oprema uspješno spremljena.", Severity.Success);
             Navigation.NavigateTo("/equipment");
+            return;
         }
-        else
-        {
-            var error = await response.Content.ReadAsStringAsync();
-            Snackbar.Add($"Greška: {error}", Severity.Error);
-        }
+
+        var message = await response.Content.ReadAsStringAsync();
+        errorMessage = string.IsNullOrWhiteSpace(message)
+            ? $"Spremanje nije uspjelo. Status: {(int)response.StatusCode}"
+            : message;
     }
 }

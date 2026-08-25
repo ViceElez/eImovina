@@ -1,0 +1,137 @@
+@page "/equipment/create"
+@rendermode InteractiveServer
+@using eImovina.Shared.DTOs
+@using eImovina.Shared.DTOs.Equipments
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<MudText Typo="Typo.h4" GutterBottom="true">Nova oprema</MudText>
+<MudText Typo="Typo.body1" Class="mb-4">
+    Na ovoj stranici unosimo novu opremu i podatke šaljemo prema API-ju preko POST zahtjeva.
+</MudText>
+
+@if (!string.IsNullOrWhiteSpace(statusMessage))
+{
+    <MudAlert Severity="Severity.Info" Class="mb-4">
+        @statusMessage
+    </MudAlert>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">
+        @errorMessage
+    </MudAlert>
+}
+
+<MudStack Spacing="2">
+    <MudTextField @bind-Value="model.InventoryNumber" Label="Inventurni broj" Required="true" Immediate="true" />
+    <MudTextField @bind-Value="model.SerialNumber" Label="Serijski broj" Immediate="true" />
+    <MudTextField @bind-Value="model.Name" Label="Naziv" Required="true" Immediate="true" />
+
+    <MudSelect T="int"
+               Label="Kategorija"
+               @bind-Value="model.CategoryId"
+               Variant="Variant.Outlined"
+               Required="true">
+        @foreach (var category in categoryList)
+        {
+            <MudSelectItem Value="@category.Id">@category.Name</MudSelectItem>
+        }
+    </MudSelect>
+
+    <MudSelect T="int"
+               Label="Status"
+               @bind-Value="model.StatusId"
+               Variant="Variant.Outlined"
+               Required="true">
+        @foreach (var status in statusList)
+        {
+            <MudSelectItem Value="@status.Id">@status.Name</MudSelectItem>
+        }
+    </MudSelect>
+
+    <MudSelect T="int"
+               Label="Lokacija"
+               @bind-Value="model.CurrentLocationId"
+               Variant="Variant.Outlined"
+               Required="true">
+        @foreach (var location in locationList)
+        {
+            <MudSelectItem Value="@location.Id">@location.Name</MudSelectItem>
+        }
+    </MudSelect>
+
+    <MudNumericField @bind-Value="model.Value" Label="Nabavna vrijednost (€)" />
+    <MudDatePicker @bind-Date="purchaseDate" Label="Datum nabave" />
+    <MudTextField @bind-Value="model.Note" Label="Napomena" Lines="3" Immediate="true" />
+
+    <MudButton ButtonType="ButtonType.Button"
+               OnClick="SaveEquipment"
+               Variant="Variant.Filled"
+               Color="Color.Primary">
+        Spremi
+    </MudButton>
+</MudStack>
+
+@code {
+    private string? statusMessage;
+    private string? errorMessage;
+
+    private List<LookUpDto> categoryList = new();
+    private List<LookUpDto> statusList = new();
+    private List<LookUpDto> locationList = new();
+
+    private SaveEquipmentDto model = new();
+    private DateTime? purchaseDate = DateTime.Today;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categoryList = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/equipment-categories") ?? new();
+        statusList = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/equipment-statuses") ?? new();
+        locationList = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/locations") ?? new();
+
+        if (model.CategoryId == 0 && categoryList.Count > 0)
+            model.CategoryId = categoryList[0].Id;
+
+        if (model.StatusId == 0 && statusList.Count > 0)
+            model.StatusId = statusList[0].Id;
+
+        if (model.CurrentLocationId == 0 && locationList.Count > 0)
+            model.CurrentLocationId = locationList[0].Id;
+    }
+
+    private async Task SaveEquipment()
+    {
+        try
+        {
+            errorMessage = null;
+
+            if (string.IsNullOrWhiteSpace(model.InventoryNumber) || string.IsNullOrWhiteSpace(model.Name))
+            {
+                errorMessage = "Upiši barem obavezna polja: inventurni broj i naziv.";
+                return;
+            }
+
+            model.PurchaseDate = purchaseDate;
+
+            var response = await Http.PostAsJsonAsync("api/equipment", model);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/equipment");
+                return;
+            }
+
+            var message = await response.Content.ReadAsStringAsync();
+            errorMessage = string.IsNullOrWhiteSpace(message)
+                ? $"Spremanje nije uspjelo. Status: {(int)response.StatusCode}"
+                : message;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Greška kod spremanja: {ex.Message}";
+        }
+    }
+}
