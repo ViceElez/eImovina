@@ -1,0 +1,63 @@
+@page "/locations"
+@rendermode InteractiveServer
+@using eImovina.Shared.DTOs.Locations
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<MudText Typo="Typo.h4" GutterBottom="true">Lokacije</MudText>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/locations/create" Class="mb-4">
+    Nova lokacija
+</MudButton>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+<MudTable Items="@locations" Hover="true" Striped="true" Bordered="true" Dense="true">
+    <HeaderContent>
+        <MudTh>Naziv</MudTh>
+        <MudTh>Tip lokacije</MudTh>
+        <MudTh>Adresa</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Akcije</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Naziv">@context.Name</MudTd>
+        <MudTd DataLabel="Tip lokacije">@context.LocationType</MudTd>
+        <MudTd DataLabel="Adresa">@(context.Address ?? "-")</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)">
+                @(context.IsActive ? "Aktivna" : "Neaktivna")
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Akcije">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                           Color="Color.Primary"
+                           OnClick="@(() => Navigation.NavigateTo($"/locations/edit/{context.Id}"))"
+                           title="Uredi" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Class="pa-4">Nema unesenih lokacija.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<LocationDto> locations = new();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            locations = await Http.GetFromJsonAsync<List<LocationDto>>("api/locations") ?? new();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Greška kod dohvaćanja lokacija: {ex.Message}";
+        }
+    }
+}

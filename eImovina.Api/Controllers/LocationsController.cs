@@ -1,8 +1,7 @@
 using eImovina.Api.Data;
 using eImovina.Api.Security;
-using eImovina.Shared.DTOs;
-using eImovina.Shared.Models.Locations;
 using eImovina.Shared.DTOs.Locations;
+using eImovina.Shared.Models.Locations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +10,7 @@ namespace eImovina.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+//[Authorize]
 public class LocationsController : ControllerBase
 {
     private readonly eImovinaDbContext _context;
@@ -22,7 +21,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
+    //[Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
     public async Task<ActionResult<List<LocationDto>>> GetLocations()
     {
         var locations = await _context.Locations
@@ -42,20 +41,8 @@ public class LocationsController : ControllerBase
         return Ok(locations);
     }
 
-    [HttpGet("lookup")]
-    public async Task<ActionResult<List<LookUpDto>>> GetLocationsLookup()
-    {
-        var locations = await _context.Locations
-            .Where(location => location.IsActive)
-            .OrderBy(location => location.Name)
-            .Select(location => new LookUpDto { Id = location.Id, Name = location.Name })
-            .ToListAsync();
-
-        return Ok(locations);
-    }
-
     [HttpGet("{id}")]
-    [Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
+    //[Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
     public async Task<ActionResult<LocationDto>> GetLocationById(int id)
     {
         var location = await _context.Locations
@@ -77,7 +64,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
+    //[Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
     public async Task<ActionResult<LocationDto>> CreateLocation(SaveLocationDto dto)
     {
         var location = new Location
@@ -95,7 +82,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    [Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
+    //[Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
     public async Task<IActionResult> UpdateLocation(int id, SaveLocationDto dto)
     {
         var location = await _context.Locations.FindAsync(id);

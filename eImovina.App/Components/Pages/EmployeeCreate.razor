@@ -1,0 +1,70 @@
+@page "/employees/create"
+@rendermode InteractiveServer
+@using eImovina.Shared.DTOs
+@using eImovina.Shared.DTOs.Users
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<MudText Typo="Typo.h4" GutterBottom="true">Novi zaposlenik</MudText>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+<MudStack Spacing="2">
+    <MudTextField @bind-Value="model.FirstName" Label="Ime" Required="true" Immediate="true" />
+    <MudTextField @bind-Value="model.LastName" Label="Prezime" Required="true" Immediate="true" />
+    <MudTextField @bind-Value="model.Email" Label="Email" Immediate="true" />
+
+    <MudSelect T="int" Label="Lokacija" @bind-Value="model.LocationId" Variant="Variant.Outlined" Required="true">
+        @foreach (var location in locations)
+        {
+            <MudSelectItem Value="@location.Id">@location.Name</MudSelectItem>
+        }
+    </MudSelect>
+
+    <MudSwitch @bind-Value="model.IsActive" Label="Aktivan" Color="Color.Primary" />
+
+    <MudButton ButtonType="ButtonType.Button" OnClick="SaveEmployee" Variant="Variant.Filled" Color="Color.Primary">
+        Spremi
+    </MudButton>
+</MudStack>
+
+@code {
+    private SaveEmployeeDto model = new();
+    private List<LookUpDto> locations = new();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        locations = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/locations") ?? new();
+
+        if (model.LocationId == 0 && locations.Count > 0)
+            model.LocationId = locations[0].Id;
+    }
+
+    private async Task SaveEmployee()
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(model.FirstName) || string.IsNullOrWhiteSpace(model.LastName))
+        {
+            errorMessage = "Ime i prezime su obavezni.";
+            return;
+        }
+
+        var response = await Http.PostAsJsonAsync("api/employees", model);
+
+        if (response.IsSuccessStatusCode)
+        {
+            Navigation.NavigateTo("/employees");
+            return;
+        }
+
+        errorMessage = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(errorMessage))
+            errorMessage = $"Spremanje nije uspjelo. Status: {(int)response.StatusCode}";
+    }
+}

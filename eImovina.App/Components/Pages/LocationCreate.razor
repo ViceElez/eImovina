@@ -1,0 +1,70 @@
+@page "/locations/create"
+@rendermode InteractiveServer
+@using eImovina.Shared.DTOs
+@using eImovina.Shared.DTOs.Locations
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<MudText Typo="Typo.h4" GutterBottom="true">Nova lokacija</MudText>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+<MudStack Spacing="2">
+    <MudTextField @bind-Value="model.Name" Label="Naziv" Required="true" Immediate="true" />
+
+    <MudSelect T="int" Label="Tip lokacije" @bind-Value="model.LocationTypeId" Variant="Variant.Outlined" Required="true">
+        @foreach (var type in locationTypes)
+        {
+            <MudSelectItem Value="@type.Id">@type.Name</MudSelectItem>
+        }
+    </MudSelect>
+
+    <MudTextField @bind-Value="model.Address" Label="Adresa" Immediate="true" />
+
+    <MudSwitch @bind-Value="model.IsActive" Label="Aktivna" Color="Color.Primary" />
+
+    <MudButton ButtonType="ButtonType.Button" OnClick="SaveLocation" Variant="Variant.Filled" Color="Color.Primary">
+        Spremi
+    </MudButton>
+</MudStack>
+
+@code {
+    private SaveLocationDto model = new();
+    private List<LookUpDto> locationTypes = new();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        locationTypes = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/location-types") ?? new();
+
+        if (model.LocationTypeId == 0 && locationTypes.Count > 0)
+            model.LocationTypeId = locationTypes[0].Id;
+    }
+
+    private async Task SaveLocation()
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(model.Name))
+        {
+            errorMessage = "Naziv lokacije je obavezan.";
+            return;
+        }
+
+        var response = await Http.PostAsJsonAsync("api/locations", model);
+
+        if (response.IsSuccessStatusCode)
+        {
+            Navigation.NavigateTo("/locations");
+            return;
+        }
+
+        errorMessage = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(errorMessage))
+            errorMessage = $"Spremanje nije uspjelo. Status: {(int)response.StatusCode}";
+    }
+}
