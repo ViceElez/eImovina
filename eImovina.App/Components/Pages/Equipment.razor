@@ -132,16 +132,15 @@
         <MudTd DataLabel="Lokacija">@context.CurrentLocation</MudTd>
         <MudTd DataLabel="Zaduženo na">@(context.AssignedTo ?? "-")</MudTd>
         <MudTd DataLabel="Akcije">
-            <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                           Color="Color.Primary"
-                           Href="@($"/equipment/edit/{context.Id}")"
-                           title="Uredi"
-                           @onclick:stopPropagation="true" />
-            <MudIconButton Icon="@Icons.Material.Filled.Info"
-                           Color="Color.Default"
-                           Href="@($"/equipment/{context.Id}")"
-                           title="Profil opreme"
-                           @onclick:stopPropagation="true" />
+            <MudTd DataLabel="Akcije" @onclick:stopPropagation="true">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                               OnClick="@(() => Navigation.NavigateTo($"/equipment/edit/{context.Id}"))" 
+                               title="Uredi opremu"/>
+                <MudIconButton Icon="@Icons.Material.Filled.Info"
+                               Color="Color.Default"
+                               Href="@($"/equipment/{context.Id}")"
+                               title="Profil opreme" />
+            </MudTd>
         </MudTd>
     </RowTemplate>
 

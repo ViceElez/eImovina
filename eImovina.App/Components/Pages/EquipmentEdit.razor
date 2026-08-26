@@ -84,9 +84,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        categoryList = await Http.GetFromJsonAsync<List<LookUpDto>>("api/equipmentcategories") ?? new();
-        statusList = await Http.GetFromJsonAsync<List<LookUpDto>>("api/equipmentstatuses") ?? new();
-        locationList = await Http.GetFromJsonAsync<List<LookUpDto>>("api/locations/lookup") ?? new();
+        categoryList = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/equipment-categories") ?? new();
+        statusList = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/equipment-statuses") ?? new();
+        locationList = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/locations") ?? new();
 
         var equipment = await Http.GetFromJsonAsync<EquipmentDto>($"api/equipment/{Id}");
 
