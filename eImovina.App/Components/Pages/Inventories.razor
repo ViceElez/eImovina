@@ -1,0 +1,104 @@
+@page "/inventories"
+@rendermode InteractiveServer
+@using eImovina.Shared.DTOs
+@using eImovina.Shared.DTOs.Inventories
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<MudText Typo="Typo.h4" GutterBottom="true">Inventure</MudText>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/inventories/create" Class="mb-4">
+    Nova inventura
+</MudButton>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+<MudPaper Class="pa-4 mb-4">
+    <MudSelect T="int?" Label="Status" @bind-Value="statusId" Variant="Variant.Outlined" Clearable="true" Class="mb-2">
+        @foreach (var s in statuses)
+        {
+            <MudSelectItem T="int?" Value="@((int?)s.Id)">@s.Name</MudSelectItem>
+        }
+    </MudSelect>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadInventories">Primijeni</MudButton>
+    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetFilter" Class="ml-2">Očisti</MudButton>
+</MudPaper>
+
+<MudTable Items="@inventories"
+          Hover="true"
+          Striped="true"
+          Bordered="true"
+          Dense="true"
+          OnRowClick="@((TableRowClickEventArgs<InventoryDto> args) => Navigation.NavigateTo($"/inventories/{args.Item!.Id}"))"
+          RowStyle="cursor: pointer;">
+    <HeaderContent>
+        <MudTh>Lokacija</MudTh>
+        <MudTh>Odgovorna osoba</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Napredak</MudTh>
+        <MudTh>Pronađeno / Nedostaje / Oštećeno</MudTh>
+        <MudTh>Otvorena</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Lokacija">@context.Location</MudTd>
+        <MudTd DataLabel="Odgovorna osoba">@context.ResponsibleEmployee</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Napredak">@context.ProcessedItemsCount / @context.TotalItemsCount</MudTd>
+        <MudTd DataLabel="Pronađeno / Nedostaje / Oštećeno">
+            @context.FoundCount / @context.MissingCount / @context.DamagedCount
+        </MudTd>
+        <MudTd DataLabel="Otvorena">@(context.OpenedAt?.ToShortDateString() ?? "-")</MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Class="pa-4">Nema inventura za zadane kriterije.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<InventoryDto> inventories = new();
+    private List<LookUpDto> statuses = new();
+    private int? statusId;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        statuses = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/inventory-statuses") ?? new();
+        await LoadInventories();
+    }
+
+    private async Task LoadInventories()
+    {
+        try
+        {
+            errorMessage = null;
+            var query = statusId.HasValue ? $"api/inventories?statusId={statusId}" : "api/inventories";
+            inventories = await Http.GetFromJsonAsync<List<InventoryDto>>(query) ?? new();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Greška kod dohvaćanja inventura: {ex.Message}";
+        }
+    }
+
+    private async Task ResetFilter()
+    {
+        statusId = null;
+        await LoadInventories();
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Nacrt" => Color.Default,
+        "Otvorena" => Color.Info,
+        "U tijeku" => Color.Warning,
+        "Završena" => Color.Success,
+        "Zaključana" => Color.Dark,
+        _ => Color.Default
+    };
+}

@@ -1,0 +1,69 @@
+@using eImovina.Shared.DTOs
+@using eImovina.Shared.DTOs.WriteOffRequests
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<MudDialog>
+    <DialogContent>
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-3">@errorMessage</MudAlert>
+        }
+
+        <MudSelect T="int" Label="Oprema" @bind-Value="equipmentId" Variant="Variant.Outlined">
+            @foreach (var equipment in equipmentList)
+            {
+                <MudSelectItem Value="@equipment.Id">@equipment.Name</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudTextField @bind-Value="reason" Label="Razlog otpisa" Class="mt-3" Lines="3" Variant="Variant.Outlined" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Odustani</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Pošalji zahtjev</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private List<LookUpDto> equipmentList = new();
+    private int equipmentId;
+    private string? reason;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        equipmentList = await Http.GetFromJsonAsync<List<LookUpDto>>("api/equipment/lookup") ?? new();
+    }
+
+    private async Task Submit()
+    {
+        errorMessage = null;
+
+        if (equipmentId == 0 || string.IsNullOrWhiteSpace(reason))
+        {
+            errorMessage = "Odaberi opremu i unesi razlog.";
+            return;
+        }
+
+        var response = await Http.PostAsJsonAsync("api/writeoffrequests", new SaveWriteOffRequestDto
+        {
+            EquipmentId = equipmentId,
+            Reason = reason
+        });
+
+        if (response.IsSuccessStatusCode)
+        {
+            MudDialog.Close(DialogResult.Ok(true));
+            return;
+        }
+
+        errorMessage = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(errorMessage))
+            errorMessage = $"Greška ({(int)response.StatusCode}).";
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

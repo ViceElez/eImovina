@@ -1,0 +1,108 @@
+@page "/equipment-requests"
+@rendermode InteractiveServer
+@using eImovina.Shared.DTOs
+@using eImovina.Shared.DTOs.EquipmentRequests
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject IDialogService DialogService
+
+<MudText Typo="Typo.h4" GutterBottom="true">Zahtjevi za opremu</MudText>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+<MudPaper Class="pa-4 mb-4">
+    <MudSelect T="int?" Label="Status" @bind-Value="statusId" Variant="Variant.Outlined" Clearable="true" Class="mb-2">
+        @foreach (var s in statuses)
+        {
+            <MudSelectItem T="int?" Value="@((int?)s.Id)">@s.Name</MudSelectItem>
+        }
+    </MudSelect>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadRequests">Primijeni</MudButton>
+    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetFilter" Class="ml-2">Očisti</MudButton>
+</MudPaper>
+
+<MudTable Items="@requests" Hover="true" Striped="true" Bordered="true" Dense="true">
+    <HeaderContent>
+        <MudTh>Zaposlenik</MudTh>
+        <MudTh>Kategorija</MudTh>
+        <MudTh>Opis</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Zaprimljeno</MudTh>
+        <MudTh>Akcije</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Zaposlenik">@context.Employee</MudTd>
+        <MudTd DataLabel="Kategorija">@context.Category</MudTd>
+        <MudTd DataLabel="Opis">@context.Description</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Zaprimljeno">@context.RequestedAt.ToShortDateString()</MudTd>
+        <MudTd DataLabel="Akcije">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                           Color="Color.Primary"
+                           OnClick="@(() => OpenResolveDialog(context))"
+                           title="Riješi" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Class="pa-4">Nema zahtjeva za zadane kriterije.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<EquipmentRequestDto> requests = new();
+    private List<LookUpDto> statuses = new();
+    private int? statusId;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        statuses = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/request-statuses") ?? new();
+        await LoadRequests();
+    }
+
+    private async Task LoadRequests()
+    {
+        try
+        {
+            errorMessage = null;
+            var query = statusId.HasValue ? $"api/equipmentrequests?statusId={statusId}" : "api/equipmentrequests";
+            requests = await Http.GetFromJsonAsync<List<EquipmentRequestDto>>(query) ?? new();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Greška kod dohvaćanja zahtjeva: {ex.Message}";
+        }
+    }
+
+    private async Task ResetFilter()
+    {
+        statusId = null;
+        await LoadRequests();
+    }
+
+    private async Task OpenResolveDialog(EquipmentRequestDto request)
+    {
+        var parameters = new DialogParameters { ["Request"] = request };
+        var dialog = await DialogService.ShowAsync<ResolveEquipmentRequestDialog>("Riješi zahtjev", parameters);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled)
+            await LoadRequests();
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Zaprimljeno" => Color.Default,
+        "U obradi" => Color.Info,
+        "Odobreno" => Color.Success,
+        "Odbijeno" => Color.Error,
+        "Realizirano" => Color.Success,
+        "Zatvoreno" => Color.Dark,
+        _ => Color.Default
+    };
+}

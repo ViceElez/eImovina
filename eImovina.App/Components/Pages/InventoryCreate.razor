@@ -1,0 +1,87 @@
+@page "/inventories/create"
+@rendermode InteractiveServer
+@using eImovina.Shared.DTOs
+@using eImovina.Shared.DTOs.Inventories
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<MudText Typo="Typo.h4" GutterBottom="true">Nova inventura</MudText>
+<MudText Typo="Typo.body1" Class="mb-4">
+    Inventura se kreira u statusu "Nacrt". Stavke opreme formiraju se tek kad je otvoriš.
+</MudText>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+<MudForm @ref="form">
+    <MudStack Spacing="2">
+        <MudSelect T="int" Label="Lokacija" @bind-Value="model.LocationId" Variant="Variant.Outlined" Required="true" RequiredError="Odaberi lokaciju.">
+            @foreach (var location in locations)
+            {
+                <MudSelectItem Value="@location.Id">@location.Name</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudSelect T="int" Label="Odgovorna osoba" @bind-Value="model.ResponsibleEmployeeId" Variant="Variant.Outlined" Required="true" RequiredError="Odaberi odgovornu osobu.">
+            @foreach (var employee in employees)
+            {
+                <MudSelectItem Value="@employee.Id">@employee.Name</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudTextField @bind-Value="model.Note" Label="Napomena" Lines="3" />
+
+        <MudButton ButtonType="ButtonType.Button" OnClick="SaveInventory" Variant="Variant.Filled" Color="Color.Primary">
+            Spremi
+        </MudButton>
+    </MudStack>
+</MudForm>
+
+@code {
+    private MudForm form = null!;
+    private SaveInventoryDto model = new();
+    private List<LookUpDto> locations = new();
+    private List<LookUpDto> employees = new();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        locations = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/locations") ?? new();
+        employees = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/employees") ?? new();
+
+        if (locations.Count > 0)
+            model.LocationId = locations[0].Id;
+        if (employees.Count > 0)
+            model.ResponsibleEmployeeId = employees[0].Id;
+    }
+
+    private async Task SaveInventory()
+    {
+        errorMessage = null;
+
+        await form.Validate();
+        if (!form.IsValid)
+            return;
+
+        var response = await Http.PostAsJsonAsync("api/inventories", model);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var created = await response.Content.ReadFromJsonAsync<CreatedInventoryDto>();
+            Navigation.NavigateTo(created is not null ? $"/inventories/{created.Id}" : "/inventories");
+            return;
+        }
+
+        errorMessage = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(errorMessage))
+            errorMessage = $"Spremanje nije uspjelo. Status: {(int)response.StatusCode}";
+    }
+
+    private class CreatedInventoryDto
+    {
+        public int Id { get; set; }
+    }
+}

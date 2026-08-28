@@ -1,0 +1,118 @@
+@page "/my-requests"
+@rendermode InteractiveServer
+@using eImovina.Shared.DTOs
+@using eImovina.Shared.DTOs.EquipmentRequests
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<MudText Typo="Typo.h4" GutterBottom="true">Moji zahtjevi</MudText>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <MudAlert Severity="Severity.Success" Class="mb-4">@successMessage</MudAlert>
+}
+
+<MudPaper Class="pa-4 mb-4">
+    <MudText Typo="Typo.h6" GutterBottom="true">Novi zahtjev</MudText>
+    <MudForm @ref="form">
+        <MudStack Spacing="2">
+            <MudSelect T="int" Label="Kategorija" @bind-Value="newRequest.CategoryId" Variant="Variant.Outlined" Required="true" RequiredError="Odaberi kategoriju.">
+                @foreach (var category in categories)
+                {
+                    <MudSelectItem Value="@category.Id">@category.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudTextField @bind-Value="newRequest.Description"
+                          Label="Opis"
+                          Placeholder="npr. treba mi nova stolica, pokvario se miš..."
+                          Lines="2"
+                          Required="true"
+                          RequiredError="Opis je obavezan." />
+
+            <MudButton ButtonType="ButtonType.Button" OnClick="SubmitRequest" Variant="Variant.Filled" Color="Color.Primary">
+                Pošalji zahtjev
+            </MudButton>
+        </MudStack>
+    </MudForm>
+</MudPaper>
+
+<MudTable Items="@myRequests" Hover="true" Striped="true" Dense="true">
+    <HeaderContent>
+        <MudTh>Kategorija</MudTh>
+        <MudTh>Opis</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Zaprimljeno</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Kategorija">@context.Category</MudTd>
+        <MudTd DataLabel="Opis">@context.Description</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Zaprimljeno">@context.RequestedAt.ToShortDateString()</MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Class="pa-4">Još nisi poslao nijedan zahtjev.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private MudForm form = null!;
+    private SaveEquipmentRequestDto newRequest = new();
+    private List<EquipmentRequestDto> myRequests = new();
+    private List<LookUpDto> categories = new();
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        categories = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/equipment-categories") ?? new();
+        await LoadMyRequests();
+    }
+
+    private async Task LoadMyRequests()
+    {
+        myRequests = await Http.GetFromJsonAsync<List<EquipmentRequestDto>>("api/equipmentrequests/mine") ?? new();
+    }
+
+    private async Task SubmitRequest()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        await form.Validate();
+        if (!form.IsValid)
+            return;
+
+        var response = await Http.PostAsJsonAsync("api/equipmentrequests/mine", newRequest);
+
+        if (response.IsSuccessStatusCode)
+        {
+            successMessage = "Zahtjev je poslan.";
+            newRequest = new SaveEquipmentRequestDto();
+            await LoadMyRequests();
+            return;
+        }
+
+        errorMessage = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(errorMessage))
+            errorMessage = $"Slanje nije uspjelo. Status: {(int)response.StatusCode}";
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Zaprimljeno" => Color.Default,
+        "U obradi" => Color.Info,
+        "Odobreno" => Color.Success,
+        "Odbijeno" => Color.Error,
+        "Realizirano" => Color.Success,
+        "Zatvoreno" => Color.Dark,
+        _ => Color.Default
+    };
+}

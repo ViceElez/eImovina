@@ -1,0 +1,123 @@
+@page "/write-off-requests"
+@rendermode InteractiveServer
+@using eImovina.Shared.DTOs
+@using eImovina.Shared.DTOs.WriteOffRequests
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject IDialogService DialogService
+
+<MudText Typo="Typo.h4" GutterBottom="true">Zahtjevi za otpis</MudText>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog" Class="mb-4">
+    Novi zahtjev za otpis
+</MudButton>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+<MudPaper Class="pa-4 mb-4">
+    <MudSelect T="int?" Label="Status" @bind-Value="statusId" Variant="Variant.Outlined" Clearable="true" Class="mb-2">
+        @foreach (var s in statuses)
+        {
+            <MudSelectItem T="int?" Value="@((int?)s.Id)">@s.Name</MudSelectItem>
+        }
+    </MudSelect>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadRequests">Primijeni</MudButton>
+    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetFilter" Class="ml-2">Očisti</MudButton>
+</MudPaper>
+
+<MudTable Items="@requests" Hover="true" Striped="true" Bordered="true" Dense="true">
+    <HeaderContent>
+        <MudTh>Oprema</MudTh>
+        <MudTh>Podnositelj</MudTh>
+        <MudTh>Razlog</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Zaprimljeno</MudTh>
+        <MudTh>Akcije</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Oprema">@context.Equipment (@context.InventoryNumber)</MudTd>
+        <MudTd DataLabel="Podnositelj">@context.RequestedBy</MudTd>
+        <MudTd DataLabel="Razlog">@context.Reason</MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Color="@GetStatusColor(context.Status)">@context.Status</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Zaprimljeno">@context.RequestedAt.ToShortDateString()</MudTd>
+        <MudTd DataLabel="Akcije">
+            @if (context.Status is "Zaprimljeno" or "U obradi")
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.Gavel"
+                               Color="Color.Primary"
+                               OnClick="@(() => OpenDecideDialog(context))"
+                               title="Odluči" />
+            }
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Class="pa-4">Nema zahtjeva za zadane kriterije.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<WriteOffRequestDto> requests = new();
+    private List<LookUpDto> statuses = new();
+    private int? statusId;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        statuses = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/write-off-request-statuses") ?? new();
+        await LoadRequests();
+    }
+
+    private async Task LoadRequests()
+    {
+        try
+        {
+            errorMessage = null;
+            var query = statusId.HasValue ? $"api/writeoffrequests?statusId={statusId}" : "api/writeoffrequests";
+            requests = await Http.GetFromJsonAsync<List<WriteOffRequestDto>>(query) ?? new();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Greška kod dohvaćanja zahtjeva: {ex.Message}";
+        }
+    }
+
+    private async Task ResetFilter()
+    {
+        statusId = null;
+        await LoadRequests();
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var dialog = await DialogService.ShowAsync<CreateWriteOffRequestDialog>("Novi zahtjev za otpis");
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled)
+            await LoadRequests();
+    }
+
+    private async Task OpenDecideDialog(WriteOffRequestDto request)
+    {
+        var parameters = new DialogParameters { ["Request"] = request };
+        var dialog = await DialogService.ShowAsync<DecideWriteOffRequestDialog>("Odluči o zahtjevu", parameters);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled)
+            await LoadRequests();
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Zaprimljeno" => Color.Default,
+        "U obradi" => Color.Info,
+        "Odobreno" => Color.Success,
+        "Odbijeno" => Color.Error,
+        "Provedeno" => Color.Dark,
+        _ => Color.Default
+    };
+}

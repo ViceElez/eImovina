@@ -1,0 +1,88 @@
+@using eImovina.Shared.DTOs
+@using eImovina.Shared.DTOs.Inventories
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<MudDialog>
+    <DialogContent>
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-3">@errorMessage</MudAlert>
+        }
+
+        <MudText Typo="Typo.subtitle2" Class="mb-2">
+            @Item.Equipment (@Item.ExpectedInventoryNumber)
+        </MudText>
+
+        <MudSwitch @bind-Value="isFound" Label="Oprema pronađena" Color="Color.Success" />
+
+        @if (isFound)
+        {
+            <MudSelect T="int" Label="Gdje je pronađena" @bind-Value="foundLocationId" Variant="Variant.Outlined" Class="mt-2">
+                @foreach (var location in locations)
+                {
+                    <MudSelectItem Value="@location.Id">@location.Name</MudSelectItem>
+                }
+            </MudSelect>
+        }
+
+        <MudSwitch @bind-Value="isDamaged" Label="Oštećena" Color="Color.Error" Class="mt-2" />
+
+        @if (isDamaged)
+        {
+            <MudTextField @bind-Value="damageNote" Label="Opis oštećenja" Lines="2" Class="mt-2" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Odustani</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Spremi</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public int InventoryId { get; set; }
+    [Parameter] public InventoryItemDto Item { get; set; } = null!;
+
+    private List<LookUpDto> locations = new();
+    private bool isFound;
+    private int foundLocationId;
+    private bool isDamaged;
+    private string? damageNote;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        locations = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/locations") ?? new();
+
+        isFound = Item.IsFound ?? true;
+        foundLocationId = Item.FoundLocationId ?? Item.ExpectedLocationId;
+        isDamaged = Item.IsDamaged ?? false;
+        damageNote = Item.DamageNote;
+    }
+
+    private async Task Submit()
+    {
+        errorMessage = null;
+
+        var response = await Http.PutAsJsonAsync($"api/inventories/{InventoryId}/items/{Item.Id}", new SaveInventoryItemDto
+        {
+            IsFound = isFound,
+            FoundLocationId = isFound ? foundLocationId : null,
+            IsDamaged = isDamaged,
+            DamageNote = isDamaged ? damageNote : null
+        });
+
+        if (response.IsSuccessStatusCode)
+        {
+            MudDialog.Close(DialogResult.Ok(true));
+            return;
+        }
+
+        errorMessage = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(errorMessage))
+            errorMessage = $"Greška ({(int)response.StatusCode}).";
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

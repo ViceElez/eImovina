@@ -1,0 +1,239 @@
+@page "/inventories/{Id:int}"
+@rendermode InteractiveServer
+@using eImovina.Shared.DTOs
+@using eImovina.Shared.DTOs.Inventories
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject IDialogService DialogService
+
+@if (inventory is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+        <MudText Typo="Typo.h4">Inventura - @inventory.Location</MudText>
+        <MudChip T="string" Color="@GetStatusColor(inventory.Status)" Size="Size.Large">@inventory.Status</MudChip>
+    </MudStack>
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+    }
+
+    <MudPaper Class="pa-4 mb-4">
+        <MudGrid>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.subtitle2">Odgovorna osoba</MudText>
+                <MudText>@inventory.ResponsibleEmployee</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.subtitle2">Napredak</MudText>
+                <MudText>@inventory.ProcessedItemsCount / @inventory.TotalItemsCount stavki obrađeno</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudText Typo="Typo.subtitle2">Pronađeno / Nedostaje / Oštećeno</MudText>
+                <MudText>@inventory.FoundCount / @inventory.MissingCount / @inventory.DamagedCount</MudText>
+            </MudItem>
+            <MudItem xs="12" md="3" Class="d-flex align-end gap-2">
+                @if (inventory.Status == "Nacrt")
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenInventory">
+                        Otvori inventuru
+                    </MudButton>
+                }
+                @if (inventory.Status is "Otvorena" or "U tijeku")
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="CompleteInventory">
+                        Završi inventuru
+                    </MudButton>
+                }
+                @if (inventory.Status == "Završena")
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Dark" OnClick="LockInventory">
+                        Zaključaj
+                    </MudButton>
+                }
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+
+    @if (inventory.Status != "Nacrt")
+    {
+        <MudPaper Class="pa-4 mb-4">
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudTextField @bind-Value="searchText" Label="Pretraži (naziv / inv. broj)" Variant="Variant.Outlined" Immediate="true" />
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudSelect T="bool?" Label="Pronađeno" @bind-Value="isFound" Variant="Variant.Outlined" Clearable="true">
+                        <MudSelectItem T="bool?" Value="true">Pronađeno</MudSelectItem>
+                        <MudSelectItem T="bool?" Value="false">Nedostaje</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="3">
+                    <MudSelect T="bool?" Label="Oštećeno" @bind-Value="isDamaged" Variant="Variant.Outlined" Clearable="true">
+                        <MudSelectItem T="bool?" Value="true">Da</MudSelectItem>
+                        <MudSelectItem T="bool?" Value="false">Ne</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="2" Class="d-flex align-center gap-2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadItems">Primijeni</MudButton>
+                    <MudButton Variant="Variant.Outlined" OnClick="ResetItemFilters">Očisti</MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <MudTable Items="@items" Hover="true" Striped="true" Dense="true">
+            <HeaderContent>
+                <MudTh>Inv. broj</MudTh>
+                <MudTh>Oprema</MudTh>
+                <MudTh>Očekivana lokacija</MudTh>
+                <MudTh>Pronađeno</MudTh>
+                <MudTh>Gdje</MudTh>
+                <MudTh>Oštećeno</MudTh>
+                <MudTh>Akcije</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Inv. broj">@context.ExpectedInventoryNumber</MudTd>
+                <MudTd DataLabel="Oprema">@context.Equipment</MudTd>
+                <MudTd DataLabel="Očekivana lokacija">@context.ExpectedLocation</MudTd>
+                <MudTd DataLabel="Pronađeno">
+                    @if (context.IsFound is null)
+                    {
+                        <MudChip T="string" Color="Color.Default">Nije obrađeno</MudChip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Color="@(context.IsFound == true ? Color.Success : Color.Error)">
+                            @(context.IsFound == true ? "Pronađeno" : "Nedostaje")
+                        </MudChip>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Gdje">@(context.FoundLocation ?? "-")</MudTd>
+                <MudTd DataLabel="Oštećeno">
+                    @if (context.IsDamaged == true)
+                    {
+                        <MudChip T="string" Color="Color.Warning">Da</MudChip>
+                    }
+                    else
+                    {
+                        <MudText>-</MudText>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Akcije">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Color="Color.Primary"
+                                   Disabled="@(inventory.Status == "Zaključana")"
+                                   OnClick="@(() => OpenItemDialog(context))"
+                                   title="Obradi stavku" />
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText Class="pa-4">Nema stavki za zadane kriterije.</MudText>
+            </NoRecordsContent>
+        </MudTable>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info">
+            Inventura je u statusu "Nacrt". Stavke opreme formiraju se tek nakon otvaranja.
+        </MudAlert>
+    }
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private InventoryDto? inventory;
+    private List<InventoryItemDto> items = new();
+    private string? errorMessage;
+
+    private string? searchText;
+    private bool? isFound;
+    private bool? isDamaged;
+
+    protected override async Task OnInitializedAsync() => await LoadAll();
+
+    private async Task LoadAll()
+    {
+        await LoadInventory();
+        if (inventory is not null && inventory.Status != "Nacrt")
+            await LoadItems();
+    }
+
+    private async Task LoadInventory()
+    {
+        inventory = await Http.GetFromJsonAsync<InventoryDto>($"api/inventories/{Id}");
+    }
+
+    private async Task LoadItems()
+    {
+        var query = $"api/inventories/{Id}/items?searchText={Uri.EscapeDataString(searchText ?? "")}" +
+                    $"&isFound={isFound}&isDamaged={isDamaged}";
+
+        items = await Http.GetFromJsonAsync<List<InventoryItemDto>>(query) ?? new();
+    }
+
+    private async Task ResetItemFilters()
+    {
+        searchText = null;
+        isFound = null;
+        isDamaged = null;
+        await LoadItems();
+    }
+
+    private async Task OpenItemDialog(InventoryItemDto item)
+    {
+        var parameters = new DialogParameters { ["InventoryId"] = Id, ["Item"] = item };
+        var dialog = await DialogService.ShowAsync<InventoryItemEditDialog>("Obradi stavku", parameters);
+        var result = await dialog.Result;
+
+        if (result is not null && !result.Canceled)
+            await LoadAll();
+    }
+
+    private async Task OpenInventory()
+    {
+        errorMessage = null;
+        var response = await Http.PostAsync($"api/inventories/{Id}/open", null);
+
+        if (response.IsSuccessStatusCode)
+            await LoadAll();
+        else
+            errorMessage = await response.Content.ReadAsStringAsync();
+    }
+
+    private async Task CompleteInventory()
+    {
+        errorMessage = null;
+        var response = await Http.PostAsync($"api/inventories/{Id}/complete", null);
+
+        if (response.IsSuccessStatusCode)
+            await LoadAll();
+        else
+            errorMessage = await response.Content.ReadAsStringAsync();
+    }
+
+    private async Task LockInventory()
+    {
+        errorMessage = null;
+        var response = await Http.PostAsync($"api/inventories/{Id}/lock", null);
+
+        if (response.IsSuccessStatusCode)
+            await LoadAll();
+        else
+            errorMessage = await response.Content.ReadAsStringAsync();
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Nacrt" => Color.Default,
+        "Otvorena" => Color.Info,
+        "U tijeku" => Color.Warning,
+        "Završena" => Color.Success,
+        "Zaključana" => Color.Dark,
+        _ => Color.Default
+    };
+}

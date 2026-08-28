@@ -1,0 +1,66 @@
+@using eImovina.Shared.DTOs.WriteOffRequests
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<MudDialog>
+    <DialogContent>
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-3">@errorMessage</MudAlert>
+        }
+
+        <MudText Class="mb-3">
+            <b>@Request.Equipment</b> (@Request.InventoryNumber) - @Request.Reason
+        </MudText>
+
+        <MudRadioGroup T="string" @bind-Value="decision">
+            <MudRadio T="string" Value="@("approve")" Color="Color.Success">Odobri i provedi otpis</MudRadio>
+            <MudRadio T="string" Value="@("reject")" Color="Color.Error">Odbij</MudRadio>
+        </MudRadioGroup>
+
+        <MudTextField @bind-Value="note" Label="Napomena" Class="mt-3" Lines="2" Variant="Variant.Outlined" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Odustani</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Spremi</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public WriteOffRequestDto Request { get; set; } = null!;
+
+    private string decision = "approve";
+    private string? note;
+    private string? errorMessage;
+
+    private async Task Submit()
+    {
+        errorMessage = null;
+
+        // Status ID-evi prate WriteOffRequestStatuses seed redoslijed:
+        // 1=Zaprimljeno, 2=U obradi, 3=Odobreno, 4=Odbijeno, 5=Provedeno.
+        // Ovdje direktno biramo "Provedeno" (otpis se odmah provodi) ili "Odbijeno",
+        // bez zasebnog međukoraka "Odobreno" - ako trebaš dvostupanjski tok,
+        // promijeni ovo da prvo šalje "Odobreno".
+        var statusId = decision == "approve" ? 5 : 4;
+
+        var response = await Http.PostAsJsonAsync($"api/writeoffrequests/{Request.Id}/decide", new DecideWriteOffRequestDto
+        {
+            StatusId = statusId,
+            DecisionNote = note
+        });
+
+        if (response.IsSuccessStatusCode)
+        {
+            MudDialog.Close(DialogResult.Ok(true));
+            return;
+        }
+
+        errorMessage = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(errorMessage))
+            errorMessage = $"Greška ({(int)response.StatusCode}).";
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}
