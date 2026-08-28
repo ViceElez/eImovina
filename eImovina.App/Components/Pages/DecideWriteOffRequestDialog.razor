@@ -38,11 +38,6 @@
     {
         errorMessage = null;
 
-        // Status ID-evi prate WriteOffRequestStatuses seed redoslijed:
-        // 1=Zaprimljeno, 2=U obradi, 3=Odobreno, 4=Odbijeno, 5=Provedeno.
-        // Ovdje direktno biramo "Provedeno" (otpis se odmah provodi) ili "Odbijeno",
-        // bez zasebnog međukoraka "Odobreno" - ako trebaš dvostupanjski tok,
-        // promijeni ovo da prvo šalje "Odobreno".
         var statusId = decision == "approve" ? 5 : 4;
 
         var response = await Http.PostAsJsonAsync($"api/writeoffrequests/{Request.Id}/decide", new DecideWriteOffRequestDto
