@@ -1,0 +1,26 @@
+@using eImovina.App.Auth
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthTokenProvider TokenProvider
+@inject CustomAuthStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<AuthorizeView>
+    <Authorized>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="pa-2">
+            <MudText Typo="Typo.body2">@context.User.Identity?.Name</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" OnClick="DoLogout" title="Odjava" />
+        </MudStack>
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private async Task DoLogout()
+    {
+        await TokenProvider.ClearAsync();
+
+        if (AuthStateProvider is CustomAuthStateProvider customProvider)
+            customProvider.NotifyUserChanged();
+
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}

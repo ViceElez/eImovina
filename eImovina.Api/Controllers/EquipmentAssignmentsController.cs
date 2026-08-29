@@ -10,7 +10,7 @@ namespace eImovina.Api.Controllers;
 
 [ApiController]
 [Route("api/assignments")]
-//[Authorize]
+[Authorize]
 public class EquipmentAssignmentsController : ControllerBase
 {
     private readonly eImovinaDbContext _context;
@@ -142,7 +142,7 @@ public class EquipmentAssignmentsController : ControllerBase
     }
 
     [HttpGet("mine")]
-    //[Authorize(Roles = "Employee,Admin,InventoryManager,LocationResponsible")]
+    [Authorize(Roles = "Employee,Admin,InventoryManager,LocationResponsible")]
     public async Task<ActionResult<List<EquipmentAssignmentDto>>> GetMyAssignments()
     {
         var employeeIdClaim = User.FindFirstValue("EmployeeId");

@@ -11,7 +11,7 @@ namespace eImovina.Api.Controllers;
 
 [ApiController]
 [Route("api/writeoffrequests")]
-//[Authorize]
+[Authorize]
 public class WriteOffRequestsController : ControllerBase
 {
     private readonly eImovinaDbContext _context;
@@ -22,7 +22,7 @@ public class WriteOffRequestsController : ControllerBase
     }
 
     [HttpGet]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ManageEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ManageEquipment)]
     public async Task<ActionResult<List<WriteOffRequestDto>>> GetWriteOffRequests([FromQuery] int? statusId)
     {
         var query = _context.WriteOffRequests
@@ -44,7 +44,7 @@ public class WriteOffRequestsController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ManageEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ManageEquipment)]
     public async Task<ActionResult<WriteOffRequestDto>> GetWriteOffRequestById(int id)
     {
         var request = await _context.WriteOffRequests
@@ -61,7 +61,7 @@ public class WriteOffRequestsController : ControllerBase
     }
 
     [HttpPost]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ManageEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ManageEquipment)]
     public async Task<IActionResult> CreateWriteOffRequest(SaveWriteOffRequestDto dto)
     {
         var equipment = await _context.Equipment
@@ -100,7 +100,7 @@ public class WriteOffRequestsController : ControllerBase
     }
 
     [HttpPost("{id}/decide")]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ManageEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ManageEquipment)]
     public async Task<IActionResult> DecideWriteOffRequest(int id, DecideWriteOffRequestDto dto)
     {
         var request = await _context.WriteOffRequests
@@ -121,8 +121,6 @@ public class WriteOffRequestsController : ControllerBase
 
         var newStatus = await _context.WriteOffRequestStatuses.FindAsync(dto.StatusId);
 
-        // Kad je otpis proveden, oprema dobiva status Otpisano i više se ne
-        // može zadužiti (provjereno u EquipmentAssignmentsController.AssignEquipment).
         if (newStatus?.Name == "Provedeno")
         {
             var writtenOffStatusId = await GetEquipmentStatusIdAsync("Otpisano");

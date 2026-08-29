@@ -1,0 +1,103 @@
+@page "/login"
+@rendermode InteractiveServer
+@using eImovina.App.Auth
+@using eImovina.Shared.DTOs.Auth
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject AuthTokenProvider TokenProvider
+@inject CustomAuthStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+    <MudPaper Class="pa-8" Elevation="3">
+        <MudText Typo="Typo.h4" GutterBottom="true" Align="Align.Center">e-Imovina Županije</MudText>
+        <MudText Typo="Typo.body2" Align="Align.Center" Class="mb-6">Prijava u sustav</MudText>
+
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+        }
+
+        <MudForm @ref="form">
+            <MudStack Spacing="3">
+                <MudTextField @bind-Value="model.Username"
+                              Label="Korisničko ime"
+                              Required="true"
+                              RequiredError="Korisničko ime je obavezno."
+                              Variant="Variant.Outlined" />
+
+                <MudTextField @bind-Value="model.Password"
+                              Label="Lozinka"
+                              InputType="InputType.Password"
+                              Required="true"
+                              RequiredError="Lozinka je obavezna."
+                              Variant="Variant.Outlined"
+                              OnKeyUp="HandleKeyUp" />
+
+                <MudButton ButtonType="ButtonType.Button"
+                           OnClick="DoLogin"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           FullWidth="true"
+                           Disabled="isLoading">
+                    @(isLoading ? "Prijava u tijeku..." : "Prijavi se")
+                </MudButton>
+            </MudStack>
+        </MudForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private MudForm form = null!;
+    private LoginRequestDto model = new();
+    private string? errorMessage;
+    private bool isLoading;
+
+    private async Task HandleKeyUp(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await DoLogin();
+    }
+
+    private async Task DoLogin()
+    {
+        errorMessage = null;
+
+        await form.ValidateAsync();
+        if (!form.IsValid)
+            return;
+
+        isLoading = true;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/auth/login", model);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = await response.Content.ReadAsStringAsync();
+                errorMessage = string.IsNullOrWhiteSpace(message)
+                    ? "Pogrešno korisničko ime ili lozinka."
+                    : message;
+                return;
+            }
+
+            var loginResponse = await response.Content.ReadFromJsonAsync<LoginResponseDto>();
+            if (loginResponse is null)
+            {
+                errorMessage = "Neočekivan odgovor servera.";
+                return;
+            }
+
+            await TokenProvider.SaveAsync(loginResponse);
+
+            if (AuthStateProvider is CustomAuthStateProvider customProvider)
+                customProvider.NotifyUserChanged();
+
+            Navigation.NavigateTo("/", forceLoad: false);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

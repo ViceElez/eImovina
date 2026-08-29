@@ -11,7 +11,7 @@ namespace eImovina.Api.Controllers;
 
 [ApiController]
 [Route("api/equipmentrequests")]
-//[Authorize]
+[Authorize]
 public class EquipmentRequestsController : ControllerBase
 {
     private readonly eImovinaDbContext _context;
@@ -22,7 +22,7 @@ public class EquipmentRequestsController : ControllerBase
     }
 
     [HttpGet]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ManageEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ManageEquipment)]
     public async Task<ActionResult<List<EquipmentRequestDto>>> GetEquipmentRequests([FromQuery] int? statusId, [FromQuery] int? categoryId)
     {
         var query = _context.EquipmentRequests
@@ -46,9 +46,8 @@ public class EquipmentRequestsController : ControllerBase
         return Ok(requests);
     }
 
-    // Zaposlenik vidi SAMO svoje zahtjeve - EmployeeId dolazi iz JWT claima
     [HttpGet("mine")]
-    //[Authorize(Policy = ClassAuthorizationPolicies.EmployeeAccess)]
+    [Authorize(Policy = ClassAuthorizationPolicies.EmployeeAccess)]
     public async Task<ActionResult<List<EquipmentRequestDto>>> GetMyRequests()
     {
         var employeeIdClaim = User.FindFirstValue(AppClaimTypes.EmployeeId);
@@ -70,9 +69,8 @@ public class EquipmentRequestsController : ControllerBase
         return Ok(requests);
     }
 
-    // Zaposlenik kreira zahtjev za sebe - EmployeeId se NE prima iz tijela zahtjeva
     [HttpPost("mine")]
-    //[Authorize(Policy = ClassAuthorizationPolicies.EmployeeAccess)]
+    [Authorize(Policy = ClassAuthorizationPolicies.EmployeeAccess)]
     public async Task<IActionResult> CreateMyRequest(SaveEquipmentRequestDto dto)
     {
         var employeeIdClaim = User.FindFirstValue(AppClaimTypes.EmployeeId);
@@ -97,7 +95,7 @@ public class EquipmentRequestsController : ControllerBase
     }
 
     [HttpPost("{id}/resolve")]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ManageEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ManageEquipment)]
     public async Task<IActionResult> ResolveRequest(int id, ResolveEquipmentRequestDto dto)
     {
         var request = await _context.EquipmentRequests.FindAsync(id);

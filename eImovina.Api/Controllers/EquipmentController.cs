@@ -11,7 +11,7 @@ namespace eImovina.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-//[Authorize]
+[Authorize]
 public class EquipmentController : ControllerBase
 {
     private readonly eImovinaDbContext _context;
@@ -22,7 +22,7 @@ public class EquipmentController : ControllerBase
     }
 
     [HttpGet]
-   // [Authorize(Roles = "Admin,InventoryManager,LocationResponsible")]
+    [Authorize(Roles = "Admin,InventoryManager,LocationResponsible")]
     public async Task<ActionResult<PagedResult<EquipmentDto>>> GetEquipment([FromQuery] EquipmentFilterDto filter)
     {
         var query = _context.Equipment
@@ -92,7 +92,7 @@ public class EquipmentController : ControllerBase
     }
 
     [HttpGet("lookup")]
-   // [Authorize(Roles = "Admin,InventoryManager,LocationResponsible")]
+    [Authorize(Roles = "Admin,InventoryManager,LocationResponsible")]
     public async Task<ActionResult<List<LookUpDto>>> GetEquipmentLookup()
     {
         var equipment = await _context.Equipment
@@ -109,7 +109,7 @@ public class EquipmentController : ControllerBase
     }
 
     [HttpGet("{id}")]
-   // [Authorize(Roles = "Admin,InventoryManager,LocationResponsible")]
+    [Authorize(Roles = "Admin,InventoryManager,LocationResponsible")]
     public async Task<ActionResult<EquipmentDto>> GetEquipmentById(int id)
     {
         var equipment = await _context.Equipment
@@ -130,7 +130,7 @@ public class EquipmentController : ControllerBase
     }
 
     [HttpGet("{id}/profile")]
-   // [Authorize(Roles = "Admin,InventoryManager,LocationResponsible")]
+    [Authorize(Roles = "Admin,InventoryManager,LocationResponsible")]
     public async Task<ActionResult<EquipmentProfileDto>> GetEquipmentProfile(int id)
     {
         var equipment = await _context.Equipment
@@ -224,7 +224,7 @@ public class EquipmentController : ControllerBase
     }
 
     [HttpPost]
-    //[Authorize(Roles = "Admin,InventoryManager")]
+    [Authorize(Roles = "Admin,InventoryManager")]
     public async Task<ActionResult<EquipmentDto>> CreateEquipment(SaveEquipmentDto dto)
     {
         var duplicateInventoryNumber = await _context.Equipment
@@ -262,7 +262,7 @@ public class EquipmentController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    //[Authorize(Roles = "Admin,InventoryManager")]
+    [Authorize(Roles = "Admin,InventoryManager")]
     public async Task<IActionResult> UpdateEquipment(int id, SaveEquipmentDto dto)
     {
         var equipment = await _context.Equipment.FindAsync(id);

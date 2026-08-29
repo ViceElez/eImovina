@@ -10,7 +10,7 @@ namespace eImovina.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-//[Authorize]
+[Authorize]
 public class EmployeesController : ControllerBase
 {
     private readonly eImovinaDbContext _context;
@@ -21,7 +21,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpGet]
-    //[Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
+    [Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
     public async Task<ActionResult<List<EmployeeDto>>> GetEmployees()
     {
         var employees = await _context.Employees
@@ -43,7 +43,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    //[Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
+    [Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
     public async Task<ActionResult<EmployeeDto>> GetEmployeeById(int id)
     {
         var employee = await _context.Employees
@@ -66,7 +66,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpPost]
-    //[Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
+    [Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
     public async Task<ActionResult<EmployeeDto>> CreateEmployee(SaveEmployeeDto dto)
     {
         var employee = new Employee
@@ -85,7 +85,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    //[Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
+    [Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
     public async Task<IActionResult> UpdateEmployee(int id, SaveEmployeeDto dto)
     {
         var employee = await _context.Employees.FindAsync(id);

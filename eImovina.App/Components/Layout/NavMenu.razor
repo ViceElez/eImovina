@@ -1,44 +1,54 @@
-﻿<MudNavMenu>
+﻿@using Microsoft.AspNetCore.Components.Authorization
+
+<MudNavMenu>
     <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">
         Home
     </MudNavLink>
 
-    <MudNavGroup Title="Imovina" Icon="@Icons.Material.Filled.Inventory2" Expanded="true">
-        <MudNavLink Href="/equipment" Icon="@Icons.Material.Filled.Computer">
-            Oprema
-        </MudNavLink>
-        <MudNavLink Href="/locations" Icon="@Icons.Material.Filled.LocationOn">
-            Lokacije
-        </MudNavLink>
-        <MudNavLink Href="/employees" Icon="@Icons.Material.Filled.People">
-            Zaposlenici
-        </MudNavLink>
-    </MudNavGroup>
+    <AuthorizeView Roles="Admin,InventoryManager,LocationResponsible">
+        <MudNavGroup Title="Imovina" Icon="@Icons.Material.Filled.Inventory2" Expanded="true">
+            <MudNavLink Href="/equipment" Icon="@Icons.Material.Filled.Computer">
+                Oprema
+            </MudNavLink>
+            <AuthorizeView Roles="Admin,InventoryManager" Context="innerContext">
+                <MudNavLink Href="/locations" Icon="@Icons.Material.Filled.LocationOn">
+                    Lokacije
+                </MudNavLink>
+                <MudNavLink Href="/employees" Icon="@Icons.Material.Filled.People">
+                    Zaposlenici
+                </MudNavLink>
+            </AuthorizeView>
+        </MudNavGroup>
 
-    <MudNavGroup Title="Poslovni procesi" Icon="@Icons.Material.Filled.Assignment" Expanded="true">
-        <MudNavLink Href="/inventories" Icon="@Icons.Material.Filled.FactCheck">
-            Inventure
-        </MudNavLink>
-        <MudNavLink Href="/equipment-requests" Icon="@Icons.Material.Filled.RequestPage">
-            Zahtjevi za opremu
-        </MudNavLink>
-        <MudNavLink Href="/write-off-requests" Icon="@Icons.Material.Filled.DeleteForever">
-            Zahtjevi za otpis
-        </MudNavLink>
-    </MudNavGroup>
+        <MudNavGroup Title="Poslovni procesi" Icon="@Icons.Material.Filled.Assignment" Expanded="true">
+            <MudNavLink Href="/inventories" Icon="@Icons.Material.Filled.FactCheck">
+                Inventure
+            </MudNavLink>
+            <MudNavLink Href="/equipment-requests" Icon="@Icons.Material.Filled.RequestPage">
+                Zahtjevi za opremu
+            </MudNavLink>
+            <MudNavLink Href="/write-off-requests" Icon="@Icons.Material.Filled.DeleteForever">
+                Zahtjevi za otpis
+            </MudNavLink>
+        </MudNavGroup>
+    </AuthorizeView>
 
-    <MudNavGroup Title="Moje" Icon="@Icons.Material.Filled.Person" Expanded="true">
-        <MudNavLink Href="/my-equipment" Icon="@Icons.Material.Filled.Badge">
-            Moja oprema
-        </MudNavLink>
-        <MudNavLink Href="/my-requests" Icon="@Icons.Material.Filled.ListAlt">
-            Moji zahtjevi
-        </MudNavLink>
-    </MudNavGroup>
+    <AuthorizeView>
+        <MudNavGroup Title="Moje" Icon="@Icons.Material.Filled.Person" Expanded="true">
+            <MudNavLink Href="/my-equipment" Icon="@Icons.Material.Filled.Badge">
+                Moja oprema
+            </MudNavLink>
+            <MudNavLink Href="/my-requests" Icon="@Icons.Material.Filled.ListAlt">
+                Moji zahtjevi
+            </MudNavLink>
+        </MudNavGroup>
+    </AuthorizeView>
 
-    <MudNavGroup Title="Administracija" Icon="@Icons.Material.Filled.AdminPanelSettings">
-        <MudNavLink Href="/users" Icon="@Icons.Material.Filled.ManageAccounts">
-            Korisnici
-        </MudNavLink>
-    </MudNavGroup>
+    <AuthorizeView Roles="Admin">
+        <MudNavGroup Title="Administracija" Icon="@Icons.Material.Filled.AdminPanelSettings">
+            <MudNavLink Href="/users" Icon="@Icons.Material.Filled.ManageAccounts">
+                Korisnici
+            </MudNavLink>
+        </MudNavGroup>
+    </AuthorizeView>
 </MudNavMenu>

@@ -11,7 +11,7 @@ namespace eImovina.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-//[Authorize]
+[Authorize]
 public class InventoriesController : ControllerBase
 {
     private readonly eImovinaDbContext _context;
@@ -41,7 +41,7 @@ public class InventoriesController : ControllerBase
     }
 
     [HttpGet]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
     public async Task<ActionResult<List<InventoryDto>>> GetInventories([FromQuery] int? statusId)
     {
         var query = _context.Inventories
@@ -67,7 +67,7 @@ public class InventoriesController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
     public async Task<ActionResult<InventoryDto>> GetInventoryById(int id)
     {
         var inventory = await _context.Inventories
@@ -84,7 +84,7 @@ public class InventoriesController : ControllerBase
     }
 
     [HttpPost]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
     public async Task<ActionResult<InventoryDto>> CreateInventory(SaveInventoryDto dto)
     {
         var locationRestriction = GetLocationRestriction();
@@ -109,7 +109,7 @@ public class InventoriesController : ControllerBase
     }
 
     [HttpPost("{id}/open")]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
     public async Task<IActionResult> OpenInventory(int id)
     {
         var inventory = await _context.Inventories
@@ -149,7 +149,7 @@ public class InventoriesController : ControllerBase
     }
 
     [HttpPost("{id}/complete")]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
     public async Task<IActionResult> CompleteInventory(int id)
     {
         var inventory = await _context.Inventories
@@ -174,9 +174,8 @@ public class InventoriesController : ControllerBase
         return NoContent();
     }
 
-    // Završena -> Zaključana: konačno stanje, nakon ovoga se ništa ne smije mijenjati
     [HttpPost("{id}/lock")]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
     public async Task<IActionResult> LockInventory(int id)
     {
         var inventory = await _context.Inventories
@@ -202,7 +201,7 @@ public class InventoriesController : ControllerBase
 
 
     [HttpGet("{id}/items")]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
     public async Task<ActionResult<List<InventoryItemDto>>> GetInventoryItems(int id, [FromQuery] InventoryItemFilterDto filter)
     {
         var query = _context.InventoryItems
@@ -256,7 +255,7 @@ public class InventoriesController : ControllerBase
 
 
     [HttpPut("{id}/items/{itemId}")]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
     public async Task<IActionResult> UpdateInventoryItem(int id, int itemId, SaveInventoryItemDto dto)
     {
         var inventory = await _context.Inventories

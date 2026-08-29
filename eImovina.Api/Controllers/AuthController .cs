@@ -26,7 +26,7 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<ActionResult<LoginResponseDto>> Login(LoginRequestDto request)
     {
-        var username = request.Email.Trim();
+        var username = request.Username.Trim();
 
         var user = await _context.Users
             .Include(item => item.UserRoles)

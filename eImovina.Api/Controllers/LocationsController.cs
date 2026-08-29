@@ -10,7 +10,7 @@ namespace eImovina.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-//[Authorize]
+[Authorize]
 public class LocationsController : ControllerBase
 {
     private readonly eImovinaDbContext _context;
@@ -21,7 +21,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpGet]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
     public async Task<ActionResult<List<LocationDto>>> GetLocations()
     {
         var locations = await _context.Locations
@@ -42,7 +42,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    //[Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
+    [Authorize(Policy = ClassAuthorizationPolicies.ViewEquipment)]
     public async Task<ActionResult<LocationDto>> GetLocationById(int id)
     {
         var location = await _context.Locations
@@ -64,7 +64,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpPost]
-    //[Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
+    [Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
     public async Task<ActionResult<LocationDto>> CreateLocation(SaveLocationDto dto)
     {
         var location = new Location
@@ -82,7 +82,7 @@ public class LocationsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    //[Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
+    [Authorize(Policy = ClassAuthorizationPolicies.AdminOnly)]
     public async Task<IActionResult> UpdateLocation(int id, SaveLocationDto dto)
     {
         var location = await _context.Locations.FindAsync(id);

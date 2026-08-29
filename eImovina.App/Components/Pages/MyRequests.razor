@@ -86,7 +86,7 @@
         errorMessage = null;
         successMessage = null;
 
-        await form.Validate();
+        await form.ValidateAsync();
         if (!form.IsValid)
             return;
 

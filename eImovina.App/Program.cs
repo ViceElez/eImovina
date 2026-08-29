@@ -1,20 +1,33 @@
 using eImovina.App.Components;
 using MudBlazor.Services;
+using eImovina.App.Auth;
+using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 builder.Services.AddMudServices();
-builder.Services.AddScoped(sp => new HttpClient
+
+builder.Services.AddAuthorizationCore();
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddScoped<AuthTokenProvider>();
+builder.Services.AddScoped<CustomAuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
+    sp.GetRequiredService<CustomAuthStateProvider>());
+
+builder.Services.AddTransient<AuthorizationMessageHandler>();
+builder.Services.AddHttpClient("eImovinaApi", client =>
 {
-    BaseAddress = new Uri("https://localhost:7062/")
-});
+    client.BaseAddress = new Uri("https://localhost:7062/");
+})
+.AddHttpMessageHandler<AuthorizationMessageHandler>();
+
+builder.Services.AddScoped(sp =>
+    sp.GetRequiredService<IHttpClientFactory>().CreateClient("eImovinaApi"));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 namespace eImovina.Api.Controllers;
 [ApiController]
 [Route("api/lookups")]
-//[Authorize]
+[Authorize]
 public class LookupsController : ControllerBase
 {
     private readonly eImovinaDbContext _db;
@@ -53,7 +53,7 @@ public class LookupsController : ControllerBase
             .ToListAsync();
 
     [HttpGet("roles")]
-    //[Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public async Task<List<LookUpDto>> Roles() =>
         await _db.Roles.Select(x => new LookUpDto { Id = x.Id, Name = x.Name }).ToListAsync();
 }
