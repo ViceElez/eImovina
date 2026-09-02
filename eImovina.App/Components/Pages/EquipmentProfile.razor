@@ -1,4 +1,6 @@
 @page "/equipment/{Id:int}"
+@attribute [Authorize(Roles = "Admin,InventoryManager,LocationResponsible")]
+@using Microsoft.AspNetCore.Authorization
 @rendermode InteractiveServer
 @using eImovina.Shared.DTOs.Equipments
 @using System.Net.Http.Json

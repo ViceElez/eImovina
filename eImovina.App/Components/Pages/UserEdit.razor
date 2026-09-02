@@ -1,0 +1,105 @@
+@page "/users/edit/{Id:int}"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin")]
+@using eImovina.Shared.DTOs
+@using eImovina.Shared.DTOs.Users
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<MudText Typo="Typo.h4" GutterBottom="true">Uredi korisnički račun</MudText>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+<MudForm @ref="form">
+    <MudStack Spacing="2">
+        <MudTextField @bind-Value="model.Username" Label="Korisničko ime" Required="true" RequiredError="Korisničko ime je obavezno." />
+        <MudTextField @bind-Value="model.Password"
+                      Label="Nova lozinka (ostavi prazno da zadržiš postojeću)"
+                      InputType="InputType.Password" />
+
+        <MudSelect T="int?" Label="Poveži sa zaposlenikom (opcionalno)" @bind-Value="employeeId" Variant="Variant.Outlined" Clearable="true">
+            @foreach (var employee in employees)
+            {
+                <MudSelectItem T="int?" Value="@((int?)employee.Id)">@employee.Name</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudSelect T="int" Label="Uloge" MultiSelection="true" @bind-SelectedValues="selectedRoleIds" Variant="Variant.Outlined">
+            @foreach (var role in roles)
+            {
+                <MudSelectItem Value="@role.Id">@role.Name</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudSwitch @bind-Value="model.IsActive" Label="Aktivan" Color="Color.Primary" />
+
+        <MudButton ButtonType="ButtonType.Button" OnClick="UpdateUser" Variant="Variant.Filled" Color="Color.Primary">
+            Spremi promjene
+        </MudButton>
+    </MudStack>
+</MudForm>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private MudForm form = null!;
+    private SaveUserDto model = new();
+    private int? employeeId;
+    private IReadOnlyCollection<int> selectedRoleIds = new List<int>();
+
+    private List<LookUpDto> employees = new();
+    private List<LookUpDto> roles = new();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        employees = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/employees") ?? new();
+        roles = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/roles") ?? new();
+
+        var user = await Http.GetFromJsonAsync<UserDto>($"api/users/{Id}");
+        if (user is not null)
+        {
+            model = new SaveUserDto
+            {
+                Username = user.Username,
+                IsActive = user.IsActive
+            };
+            employeeId = user.EmployeeId;
+            selectedRoleIds = roles.Where(role => user.Roles.Contains(role.Name)).Select(role => role.Id).ToList();
+        }
+    }
+
+    private async Task UpdateUser()
+    {
+        errorMessage = null;
+
+        await form.ValidateAsync();
+        if (!form.IsValid)
+            return;
+
+        model.EmployeeId = employeeId;
+        model.RoleIds = selectedRoleIds.ToList();
+
+        if (model.RoleIds.Count == 0)
+        {
+            errorMessage = "Odaberi barem jednu ulogu.";
+            return;
+        }
+
+        var response = await Http.PutAsJsonAsync($"api/users/{Id}", model);
+
+        if (response.IsSuccessStatusCode)
+        {
+            Navigation.NavigateTo("/users");
+            return;
+        }
+
+        errorMessage = await response.Content.ReadAsStringAsync();
+        if (string.IsNullOrWhiteSpace(errorMessage))
+            errorMessage = $"Spremanje nije uspjelo. Status: {(int)response.StatusCode}";
+    }
+}

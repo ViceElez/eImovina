@@ -1,0 +1,91 @@
+@page "/users"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin")]
+@using eImovina.Shared.DTOs.Users
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<MudText Typo="Typo.h4" GutterBottom="true">Korisnici</MudText>
+
+<MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/users/create" Class="mb-4">
+    Novi korisnički račun
+</MudButton>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+<MudTable Items="@users" Hover="true" Striped="true" Bordered="true" Dense="true">
+    <HeaderContent>
+        <MudTh>Korisničko ime</MudTh>
+        <MudTh>Zaposlenik</MudTh>
+        <MudTh>Uloge</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh>Akcije</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Korisničko ime">@context.Username</MudTd>
+        <MudTd DataLabel="Zaposlenik">@(context.Employee ?? "-")</MudTd>
+        <MudTd DataLabel="Uloge">
+            @foreach (var role in context.Roles)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary">@role</MudChip>
+            }
+        </MudTd>
+        <MudTd DataLabel="Status">
+            <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Default)">
+                @(context.IsActive ? "Aktivan" : "Deaktiviran")
+            </MudChip>
+        </MudTd>
+        <MudTd DataLabel="Akcije">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                           Color="Color.Primary"
+                           OnClick="@(() => Navigation.NavigateTo($"/users/edit/{context.Id}"))"
+                           title="Uredi" />
+            <MudIconButton Icon="@(context.IsActive ? Icons.Material.Filled.Block : Icons.Material.Filled.CheckCircle)"
+                           Color="@(context.IsActive ? Color.Error : Color.Success)"
+                           OnClick="@(() => ToggleActive(context))"
+                           title="@(context.IsActive ? "Deaktiviraj" : "Aktiviraj")" />
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Class="pa-4">Nema korisničkih računa.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<UserDto> users = new();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync() => await LoadUsers();
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            errorMessage = null;
+            users = await Http.GetFromJsonAsync<List<UserDto>>("api/users") ?? new();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Greška kod dohvaćanja korisnika: {ex.Message}";
+        }
+    }
+
+    private async Task ToggleActive(UserDto user)
+    {
+        errorMessage = null;
+
+        var response = await Http.PutAsJsonAsync($"api/users/{user.Id}/active", new SetUserActiveDto
+        {
+            IsActive = !user.IsActive
+        });
+
+        if (response.IsSuccessStatusCode)
+            await LoadUsers();
+        else
+            errorMessage = await response.Content.ReadAsStringAsync();
+    }
+}

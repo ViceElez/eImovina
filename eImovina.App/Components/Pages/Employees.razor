@@ -1,4 +1,6 @@
 @page "/employees"
+@attribute [Authorize(Roles = "Admin")]
+@using Microsoft.AspNetCore.Authorization
 @rendermode InteractiveServer
 @using eImovina.Shared.DTOs.Users
 @using System.Net.Http.Json

@@ -1,4 +1,6 @@
 @page "/locations"
+@attribute [Authorize(Roles = "Admin,InventoryManager")]
+@using Microsoft.AspNetCore.Authorization
 @rendermode InteractiveServer
 @using eImovina.Shared.DTOs.Locations
 @using System.Net.Http.Json

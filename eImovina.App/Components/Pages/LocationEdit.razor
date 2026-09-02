@@ -1,4 +1,6 @@
 @page "/locations/edit/{Id:int}"
+@attribute [Authorize(Roles = "Admin,InventoryManager")]
+@using Microsoft.AspNetCore.Authorization
 @rendermode InteractiveServer
 @using eImovina.Shared.DTOs
 @using eImovina.Shared.DTOs.Locations

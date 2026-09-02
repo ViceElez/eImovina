@@ -15,6 +15,10 @@ public class AuthorizationMessageHandler : DelegatingHandler
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var stored = await _tokenProvider.GetAsync();
+
+        Console.WriteLine($"[AuthHandler] Token present: {stored is not null}, " +
+                           $"Token value (first 20 chars): {stored?.AccessToken?[..Math.Min(20, stored.AccessToken.Length)]}");
+
         if (stored is not null)
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", stored.AccessToken);
 
