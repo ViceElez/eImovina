@@ -1,5 +1,5 @@
 @page "/equipment"
-@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@rendermode InteractiveServer
 @attribute [Authorize(Roles = "Admin,InventoryManager,LocationResponsible")]
 @using Microsoft.AspNetCore.Authorization
 @using eImovina.Shared.DTOs

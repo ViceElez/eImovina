@@ -1,5 +1,8 @@
 ﻿@inherits LayoutComponentBase
+@using eImovina.App.Auth
+@using eImovina.App.Components.Layout
 @using eImovina.App.Components.Pages
+@inject AuthTokenProvider TokenProvider
 
 <MudThemeProvider />
 <MudPopoverProvider />
@@ -22,3 +25,10 @@
         @Body
     </MudMainContent>
 </MudLayout>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await TokenProvider.RestoreSessionHeaderAsync();
+    }
+}

@@ -27,15 +27,10 @@ builder.Services.AddScoped<CustomAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
     sp.GetRequiredService<CustomAuthStateProvider>());
 
-builder.Services.AddTransient<AuthorizationMessageHandler>();
-builder.Services.AddHttpClient("eImovinaApi", client =>
+builder.Services.AddScoped(sp => new HttpClient
 {
-    client.BaseAddress = new Uri("https://localhost:7062/");
-})
-.AddHttpMessageHandler<AuthorizationMessageHandler>();
-
-builder.Services.AddScoped(sp =>
-    sp.GetRequiredService<IHttpClientFactory>().CreateClient("eImovinaApi"));
+    BaseAddress = new Uri("https://localhost:7062/")
+});
 
 var app = builder.Build();
 
