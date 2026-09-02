@@ -1,10 +1,11 @@
-using System.Security.Claims;
 using eImovina.Api.Data;
+using eImovina.Api.Security;
+using eImovina.Shared.DTOs.Equipments;
 using eImovina.Shared.Models.Equipments;
 using Microsoft.AspNetCore.Authorization;
-using eImovina.Shared.DTOs.Equipments;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace eImovina.Api.Controllers;
 
@@ -145,7 +146,7 @@ public class EquipmentAssignmentsController : ControllerBase
     [Authorize(Roles = "Employee,Admin,InventoryManager,LocationResponsible")]
     public async Task<ActionResult<List<EquipmentAssignmentDto>>> GetMyAssignments()
     {
-        var employeeIdClaim = User.FindFirstValue("EmployeeId");
+        var employeeIdClaim = User.FindFirstValue(AppClaimTypes.EmployeeId);
         if (employeeIdClaim is null)
             return BadRequest("Prijavljeni korisnik nema povezan Employee profil.");
 
