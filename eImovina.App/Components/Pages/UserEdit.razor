@@ -28,7 +28,7 @@
             }
         </MudSelect>
 
-        <MudSelect T="int" Label="Uloge" MultiSelection="true" @bind-SelectedValues="selectedRoleIds" Variant="Variant.Outlined">
+        <MudSelect T="int" Label="Uloge" MultiSelection="true" @bind-SelectedValues="selectedRoleIds" Variant="Variant.Outlined" ToStringFunc="@(id => roles.FirstOrDefault(r => r.Id == id)?.Name ?? id.ToString())">
             @foreach (var role in roles)
             {
                 <MudSelectItem Value="@role.Id">@role.Name</MudSelectItem>

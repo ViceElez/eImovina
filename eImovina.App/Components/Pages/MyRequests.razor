@@ -23,10 +23,16 @@
     <MudText Typo="Typo.h6" GutterBottom="true">Novi zahtjev</MudText>
     <MudForm @ref="form">
         <MudStack Spacing="2">
-            <MudSelect T="int" Label="Kategorija" @bind-Value="newRequest.CategoryId" Variant="Variant.Outlined" Required="true" RequiredError="Odaberi kategoriju.">
+            <MudSelect T="int?"
+                       Label="Kategorija"
+                       @bind-Value="selectedCategoryId"
+                       Placeholder="Odaberi kategoriju"
+                       Variant="Variant.Outlined"
+                       Required="true"
+                       RequiredError="Odaberi kategoriju.">
                 @foreach (var category in categories)
                 {
-                    <MudSelectItem Value="@category.Id">@category.Name</MudSelectItem>
+                    <MudSelectItem T="int?" Value="@((int?)category.Id)">@category.Name</MudSelectItem>
                 }
             </MudSelect>
 
@@ -67,6 +73,7 @@
 @code {
     private MudForm form = null!;
     private SaveEquipmentRequestDto newRequest = new();
+    private int? selectedCategoryId;
     private List<EquipmentRequestDto> myRequests = new();
     private List<LookUpDto> categories = new();
     private string? errorMessage;
@@ -89,8 +96,13 @@
         successMessage = null;
 
         await form.ValidateAsync();
-        if (!form.IsValid)
+        if (!form.IsValid || selectedCategoryId is null)
+        {
+            errorMessage = selectedCategoryId is null ? "Odaberi kategoriju." : errorMessage;
             return;
+        }
+
+        newRequest.CategoryId = selectedCategoryId.Value;
 
         var response = await Http.PostAsJsonAsync("api/equipmentrequests/mine", newRequest);
 
@@ -98,6 +110,7 @@
         {
             successMessage = "Zahtjev je poslan.";
             newRequest = new SaveEquipmentRequestDto();
+            selectedCategoryId = null;
             await LoadMyRequests();
             return;
         }
