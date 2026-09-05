@@ -1,24 +1,113 @@
 ﻿@page "/"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@rendermode InteractiveServer
+@using eImovina.Shared.DTOs
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
 
-<MudPaper Class="pa-6" Elevation="1">
-    <MudText Typo="Typo.h3" GutterBottom="true">Dobro došli u e-Imovina</MudText>
-    <MudText Typo="Typo.body1" Class="mb-4">
-        Ova aplikacija služi za upravljanje e-Imovinom.
-    </MudText>
+<MudText Typo="Typo.h4" GutterBottom="true">Pregled</MudText>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+}
+
+@if (dashboard is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else
+{
+    <MudGrid Class="mb-4">
+        <MudItem xs="12" sm="6" md="4" lg="2">
+            <StatCard Title="Ukupno opreme" Value="@dashboard.TotalEquipmentCount.ToString()" Icon="@Icons.Material.Filled.Inventory2" Color="Color.Primary" Href="/equipment" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4" lg="2">
+            <StatCard Title="Zaduženo" Value="@dashboard.AssignedEquipmentCount.ToString()" Icon="@Icons.Material.Filled.AssignmentInd" Color="Color.Success" Href="/equipment" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4" lg="2">
+            <StatCard Title="Na servisu" Value="@dashboard.InServiceEquipmentCount.ToString()" Icon="@Icons.Material.Filled.Build" Color="Color.Warning" Href="/equipment" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4" lg="2">
+            <StatCard Title="Nedostaje" Value="@dashboard.MissingEquipmentCount.ToString()" Icon="@Icons.Material.Filled.ReportProblem" Color="Color.Error" Href="/equipment" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4" lg="2">
+            <StatCard Title="Otvoreni zahtjevi" Value="@dashboard.OpenEquipmentRequestsCount.ToString()" Icon="@Icons.Material.Filled.RequestPage" Color="Color.Info" Href="/equipment-requests" />
+        </MudItem>
+        <MudItem xs="12" sm="6" md="4" lg="2">
+            <StatCard Title="Inventure u tijeku" Value="@dashboard.InventoriesInProgressCount.ToString()" Icon="@Icons.Material.Filled.FactCheck" Color="Color.Secondary" Href="/inventories" />
+        </MudItem>
+    </MudGrid>
 
     <MudGrid>
         <MudItem xs="12" md="6">
-            <MudPaper Class="pa-4" Elevation="1">
-                <MudText Typo="Typo.h6">Što ćemo graditi?</MudText>
-                <MudText>Radit cemo sa e-Imovinom.</MudText>
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6" GutterBottom="true">Ukupna vrijednost opreme</MudText>
+                <MudText Typo="Typo.h4" Color="Color.Primary">
+                    @dashboard.TotalEquipmentValue?.ToString("N2") €
+                </MudText>
             </MudPaper>
+
+            @if (dashboard.MyActiveAssignmentsCount.HasValue || dashboard.MyOpenRequestsCount.HasValue)
+            {
+                <MudPaper Class="pa-4 mt-4">
+                    <MudText Typo="Typo.h6" GutterBottom="true">Moje</MudText>
+                    <MudStack Row="true" Spacing="4">
+                        <MudLink Href="/my-equipment">
+                            <MudText Typo="Typo.body1">
+                                Trenutačno zaduženo: <b>@dashboard.MyActiveAssignmentsCount</b>
+                            </MudText>
+                        </MudLink>
+                        <MudLink Href="/my-requests">
+                            <MudText Typo="Typo.body1">
+                                Otvoreni zahtjevi: <b>@dashboard.MyOpenRequestsCount</b>
+                            </MudText>
+                        </MudLink>
+                    </MudStack>
+                </MudPaper>
+            }
         </MudItem>
 
         <MudItem xs="12" md="6">
-            <MudPaper Class="pa-4" Elevation="1">
-                <MudText Typo="Typo.h6">Zašto odvojeni App i API?</MudText>
-                <MudText>Frontend prikazuje podatke korisniku, a API obrađuje zahtjeve i radi s bazom.</MudText>
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6" GutterBottom="true">Zadnje promjene</MudText>
+                @if (dashboard.RecentChanges.Count == 0)
+                {
+                    <MudText Typo="Typo.body2">Nema nedavnih promjena.</MudText>
+                }
+                else
+                {
+                    <MudList T="string" Dense="true">
+                        @foreach (var change in dashboard.RecentChanges)
+                        {
+                            <MudListItem T="string">
+                                <MudText Typo="Typo.body2">
+                                    @change.OccurredAt.ToString("dd.MM.yyyy.") - @change.Description
+                                </MudText>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
             </MudPaper>
         </MudItem>
     </MudGrid>
-</MudPaper>
+}
+
+@code {
+    private DashboardDto? dashboard;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            dashboard = await Http.GetFromJsonAsync<DashboardDto>("api/dashboard");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Greška kod dohvaćanja dashboarda: {ex.Message}";
+        }
+    }
+}
