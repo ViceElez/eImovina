@@ -76,6 +76,7 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync();
     await DbSeeder.SeedAsync(db);
     await UserSeeder.SeedAsync(db);
+    await EquipmentSeeder.SeedAsync(db);
 }
 
 // Configure the HTTP request pipeline.
