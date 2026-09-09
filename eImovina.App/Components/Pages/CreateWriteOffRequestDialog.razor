@@ -10,10 +10,10 @@
             <MudAlert Severity="Severity.Error" Class="mb-3">@errorMessage</MudAlert>
         }
 
-        <MudSelect T="int" Label="Oprema" @bind-Value="equipmentId" Variant="Variant.Outlined">
+        <MudSelect T="int?" Label="Oprema" @bind-Value="equipmentId" Variant="Variant.Outlined">
             @foreach (var equipment in equipmentList)
             {
-                <MudSelectItem Value="@equipment.Id">@equipment.Name</MudSelectItem>
+                <MudSelectItem T="int?" Value="@((int?)equipment.Id)">@equipment.Name</MudSelectItem>
             }
         </MudSelect>
 
@@ -29,7 +29,7 @@
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
 
     private List<LookUpDto> equipmentList = new();
-    private int equipmentId;
+    private int? equipmentId;
     private string? reason;
     private string? errorMessage;
 
@@ -42,7 +42,7 @@
     {
         errorMessage = null;
 
-        if (equipmentId == 0 || string.IsNullOrWhiteSpace(reason))
+        if (equipmentId is null || equipmentId == 0 || string.IsNullOrWhiteSpace(reason))
         {
             errorMessage = "Odaberi opremu i unesi razlog.";
             return;
@@ -50,7 +50,7 @@
 
         var response = await Http.PostAsJsonAsync("api/writeoffrequests", new SaveWriteOffRequestDto
         {
-            EquipmentId = equipmentId,
+            EquipmentId = equipmentId.Value,
             Reason = reason
         });
 

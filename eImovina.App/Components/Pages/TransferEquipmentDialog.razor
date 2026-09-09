@@ -8,7 +8,7 @@
         <MudSelect T="int" @bind-Value="newEmployeeId" Label="Novi zaposlenik" Required="true" Variant="Variant.Outlined">
             @foreach (var e in employees)
             {
-                <MudSelectItem T="int" Value="@e.Id">@e.Name</MudSelectItem>
+                <MudSelectItem T="int?" Value="@e.Id">@e.Name</MudSelectItem>
             }
         </MudSelect>
         <MudTextField @bind-Value="note" Label="Napomena" Class="mt-3" Lines="2" Variant="Variant.Outlined" />
