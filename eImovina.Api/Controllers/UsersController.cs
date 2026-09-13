@@ -63,6 +63,14 @@ public class UsersController : ControllerBase
         if (usernameTaken)
             return BadRequest("Korisničko ime je već zauzeto.");
 
+        if (dto.EmployeeId is not null)
+        {
+            var employeeAlreadyLinked = await _context.Users
+                .AnyAsync(item => item.EmployeeId == dto.EmployeeId);
+            if (employeeAlreadyLinked)
+                return Conflict("Odabrani zaposlenik je već povezan s drugim korisničkim računom.");
+        }
+
         var user = new User
         {
             Username = dto.Username.Trim(),
@@ -98,6 +106,14 @@ public class UsersController : ControllerBase
         var usernameTaken = await _context.Users.AnyAsync(item => item.Username == dto.Username && item.Id != id);
         if (usernameTaken)
             return BadRequest("Korisničko ime je već zauzeto.");
+
+        if (dto.EmployeeId is not null)
+        {
+            var employeeAlreadyLinked = await _context.Users
+                .AnyAsync(item => item.EmployeeId == dto.EmployeeId && item.Id != id);
+            if (employeeAlreadyLinked)
+                return Conflict("Odabrani zaposlenik je već povezan s drugim korisničkim računom.");
+        }
 
         user.Username = dto.Username.Trim();
         user.EmployeeId = dto.EmployeeId;

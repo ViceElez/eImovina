@@ -8,7 +8,7 @@
         <MudSelect T="int" @bind-Value="newEmployeeId" Label="Novi zaposlenik" Required="true" Variant="Variant.Outlined">
             @foreach (var e in employees)
             {
-                <MudSelectItem T="int?" Value="@e.Id">@e.Name</MudSelectItem>
+                <MudSelectItem T="int" Value="@e.Id">@e.Name</MudSelectItem>
             }
         </MudSelect>
         <MudTextField @bind-Value="note" Label="Napomena" Class="mt-3" Lines="2" Variant="Variant.Outlined" />
@@ -22,6 +22,7 @@
 @code {
     [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
     [Parameter] public int EquipmentId { get; set; }
+    [Parameter] public int CurrentEmployeeId { get; set; }
 
     private List<LookUpDto> employees = new();
     private int newEmployeeId;
@@ -29,7 +30,8 @@
 
     protected override async Task OnInitializedAsync()
     {
-        employees = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/employees") ?? new();
+        var all = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/employees") ?? new();   
+        employees = all.Where(e => e.Id != CurrentEmployeeId).ToList();
     }
 
     private async Task Submit()

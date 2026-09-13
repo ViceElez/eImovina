@@ -5,10 +5,10 @@
 
 <MudDialog>
     <DialogContent>
-        <MudSelect T="int" @bind-Value="employeeId" Label="Zaposlenik" Required="true" Variant="Variant.Outlined">
+        <MudSelect T="int?" @bind-Value="employeeId" Label="Zaposlenik" Required="true" Variant="Variant.Outlined">
             @foreach (var e in employees)
             {
-                <MudSelectItem T="int?" Value="@e.Id">@e.Name</MudSelectItem>
+                <MudSelectItem T="int?" Value="@((int?)e.Id)">@e.Name</MudSelectItem>
             }
         </MudSelect>
         <MudTextField @bind-Value="note" Label="Napomena" Class="mt-3" Lines="2" Variant="Variant.Outlined" />
@@ -24,7 +24,7 @@
     [Parameter] public int EquipmentId { get; set; }
 
     private List<LookUpDto> employees = new();
-    private int employeeId;
+    private int? employeeId;
     private string? note;
 
     protected override async Task OnInitializedAsync()
@@ -33,11 +33,16 @@
     }
 
     private async Task Submit()
-    {
+    { 
+        if (employeeId is null)
+        {
+            return;
+        }
+
         var response = await Http.PostAsJsonAsync("api/assignments/assign", new AssignEquipmentDto
         {
             EquipmentId = EquipmentId,
-            EmployeeId = employeeId,
+            EmployeeId = employeeId.Value,
             Note = note
         });
 
