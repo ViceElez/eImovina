@@ -22,4 +22,8 @@
     <ProjectReference Include="..\eImovina.Shared\eImovina.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+
 </Project>

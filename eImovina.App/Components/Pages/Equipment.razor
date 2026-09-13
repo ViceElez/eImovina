@@ -80,32 +80,32 @@
     <HeaderContent>
         <MudTh>Slika</MudTh>
         <MudTh>
-            <MudTableSortLabel T="string" SortLabel="InventoryNumber">
+            <MudTableSortLabel T="EquipmentDto" SortLabel="InventoryNumber">
                 Inv. broj
             </MudTableSortLabel>
         </MudTh>
         <MudTh>
-            <MudTableSortLabel T="string" SortLabel="Name">
+            <MudTableSortLabel T="EquipmentDto" SortLabel="Name">
                 Naziv
             </MudTableSortLabel>
         </MudTh>
         <MudTh>
-            <MudTableSortLabel T="string" SortLabel="Category">
+            <MudTableSortLabel T="EquipmentDto" SortLabel="Category">
                 Kategorija
             </MudTableSortLabel>
         </MudTh>
         <MudTh>
-            <MudTableSortLabel T="string" SortLabel="Status">
+            <MudTableSortLabel T="EquipmentDto" SortLabel="Status">
                 Status
             </MudTableSortLabel>
         </MudTh>
         <MudTh>
-            <MudTableSortLabel T="string" SortLabel="CurrentLocation">
+            <MudTableSortLabel T="EquipmentDto" SortLabel="CurrentLocation">
                 Lokacija
             </MudTableSortLabel>
         </MudTh>
         <MudTh>
-            <MudTableSortLabel T="string" SortLabel="AssignedTo">
+            <MudTableSortLabel T="EquipmentDto" SortLabel="AssignedTo">
                 Zaduženo na
             </MudTableSortLabel>
         </MudTh>
@@ -136,8 +136,8 @@
         <MudTd DataLabel="Akcije">
             <MudTd DataLabel="Akcije" @onclick:stopPropagation="true">
                 <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                               OnClick="@(() => Navigation.NavigateTo($"/equipment/edit/{context.Id}"))" 
-                               title="Uredi opremu"/>
+                               OnClick="@(() => Navigation.NavigateTo($"/equipment/edit/{context.Id}"))"
+                               title="Uredi opremu" />
                 <MudIconButton Icon="@Icons.Material.Filled.Info"
                                Color="Color.Default"
                                Href="@($"/equipment/{context.Id}")"
@@ -167,6 +167,12 @@
     private int? statusId;
     private int? locationId;
 
+    // Keš zadnjeg fetch-a (bez sortiranja) - koristi se da sortiranje ne radi novi HTTP poziv,
+    // nego samo preslaže već dohvaćene podatke (npr. tih 10 komada sa trenutne stranice).
+    private List<EquipmentDto> cachedItems = new();
+    private int cachedTotalCount;
+    private string? cachedSignature;
+
     protected override async Task OnInitializedAsync()
     {
         categories = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/equipment-categories") ?? new();
@@ -176,29 +182,65 @@
 
     private async Task<TableData<EquipmentDto>> ServerReload(TableState state, CancellationToken ct)
     {
-        var filter = new EquipmentFilterDto
+        // Potpis trenutnih filtera + stranice (bez sorta) - ako se ne promijeni od zadnjeg puta,
+        // znači da je korisnik samo kliknuo na sortiranje, pa ne fetchamo ponovo sa servera.
+        var signature = $"{searchText}|{categoryId}|{statusId}|{locationId}|{state.Page}|{state.PageSize}";
+
+        List<EquipmentDto> items;
+        int totalCount;
+
+        if (signature == cachedSignature && cachedItems.Count > 0)
         {
-            SearchText = searchText,
-            CategoryId = categoryId,
-            StatusId = statusId,
-            LocationId = locationId,
-            SortBy = state.SortLabel,
-            SortDescending = state.SortDirection == SortDirection.Descending,
-            Page = state.Page + 1,
-            PageSize = state.PageSize
-        };
+            items = cachedItems;
+            totalCount = cachedTotalCount;
+        }
+        else
+        {
+            var query = $"api/equipment?searchText={Uri.EscapeDataString(searchText ?? "")}" +
+                        $"&categoryId={categoryId}&statusId={statusId}&locationId={locationId}" +
+                        $"&page={state.Page + 1}&pageSize={state.PageSize}";
 
-        var query = $"api/equipment?searchText={Uri.EscapeDataString(filter.SearchText ?? "")}" +
-                    $"&categoryId={filter.CategoryId}&statusId={filter.StatusId}&locationId={filter.LocationId}" +
-                    $"&sortBy={filter.SortBy}&sortDescending={filter.SortDescending}" +
-                    $"&page={filter.Page}&pageSize={filter.PageSize}";
+            var result = await Http.GetFromJsonAsync<PagedResult<EquipmentDto>>(query) ?? new();
 
-        var result = await Http.GetFromJsonAsync<PagedResult<EquipmentDto>>(query) ?? new();
+            items = result.Items;
+            totalCount = result.TotalCount;
 
-        return new TableData<EquipmentDto> { Items = result.Items, TotalItems = result.TotalCount };
+            cachedItems = items;
+            cachedTotalCount = totalCount;
+            cachedSignature = signature;
+        }
+
+        var sortedItems = ApplyClientSort(items, state.SortLabel, state.SortDirection);
+
+        return new TableData<EquipmentDto> { Items = sortedItems, TotalItems = totalCount };
     }
 
-    private async Task ApplyFilters() => await table.ReloadServerData();
+    private static List<EquipmentDto> ApplyClientSort(List<EquipmentDto> items, string? sortLabel, SortDirection direction)
+    {
+        if (string.IsNullOrEmpty(sortLabel) || direction == SortDirection.None)
+            return items;
+
+        IOrderedEnumerable<EquipmentDto> sorted = sortLabel switch
+        {
+            "InventoryNumber" => items.OrderBy(x => x.InventoryNumber),
+            "Name" => items.OrderBy(x => x.Name),
+            "Category" => items.OrderBy(x => x.Category),
+            "Status" => items.OrderBy(x => x.Status),
+            "CurrentLocation" => items.OrderBy(x => x.CurrentLocation),
+            "AssignedTo" => items.OrderBy(x => x.AssignedTo),
+            _ => items.OrderBy(x => 0)
+        };
+
+        var result = direction == SortDirection.Descending ? sorted.Reverse() : (IEnumerable<EquipmentDto>)sorted;
+
+        return result.ToList();
+    }
+
+    private async Task ApplyFilters()
+    {
+        cachedSignature = null;
+        await table.ReloadServerData();
+    }
 
     private async Task HandleSearchKeyUp(KeyboardEventArgs e)
     {
@@ -212,6 +254,7 @@
         categoryId = null;
         statusId = null;
         locationId = null;
+        cachedSignature = null;
         await table.ReloadServerData();
     }
 
