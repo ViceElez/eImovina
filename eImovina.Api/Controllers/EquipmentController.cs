@@ -33,6 +33,7 @@ public class EquipmentController : ControllerBase
                 .ThenInclude(assignment => assignment.Employee)
             .Include(equipment => equipment.Assignments)
                 .ThenInclude(assignment => assignment.Status)
+            .Include(equipment => equipment.Files)
             .AsQueryable();
 
         if (User.IsInRole("LocationResponsible") && !User.IsInRole("Admin") && !User.IsInRole("InventoryManager"))

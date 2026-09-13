@@ -8,7 +8,6 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
@@ -87,7 +86,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseStaticFiles();
-app.UseStaticFiles(); 
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

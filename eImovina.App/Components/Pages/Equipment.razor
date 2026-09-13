@@ -117,7 +117,7 @@
             <MudAvatar Size="Size.Large">
                 @if (!string.IsNullOrEmpty(context.CoverImageUrl))
                 {
-                    <img src="@context.CoverImageUrl" alt="@context.Name" style="width:100%;height:100%;object-fit:cover;" />
+                    <img src="@ResolveFileUrl(context.CoverImageUrl)" alt="@context.Name" style="width:100%;height:100%;object-fit:cover;" />
                 }
                 else
                 {
@@ -179,6 +179,13 @@
         statuses = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/equipment-statuses") ?? new();
         locations = await Http.GetFromJsonAsync<List<LookUpDto>>("api/lookups/locations") ?? new();
     }
+
+    // Http.BaseAddress pokazuje na Api (npr. https://localhost:7062/).
+    // CoverImageUrl iz backenda je relativan ("/uploads/equipment/xxx.png"), pa ga ovdje
+    // pretvaramo u apsolutan URL - inace <img src> pokusava dohvatiti sliku
+    // s adrese App projekta (gdje slika ne postoji), a ne s Api-ja.
+    private string ResolveFileUrl(string relativeUrl)
+        => new Uri(Http.BaseAddress!, relativeUrl).ToString();
 
     private async Task<TableData<EquipmentDto>> ServerReload(TableState state, CancellationToken ct)
     {

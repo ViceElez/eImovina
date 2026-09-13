@@ -157,7 +157,7 @@ else
                                 <MudPaper Class="pa-2 d-flex flex-column align-center">
                                     @if (file.FileType == "Image")
                                     {
-                                        <img src="@file.Url" style="width:100%;height:120px;object-fit:cover;" />
+                                        <img src="@ResolveFileUrl(file.Url)" style="width:100%;height:120px;object-fit:cover;" />
                                         @if (file.IsCoverImage)
                                         {
                                             <MudChip T="string" Size="Size.Small" Color="Color.Primary" Class="mt-1">Naslovna</MudChip>
@@ -169,7 +169,7 @@ else
                                     }
                                     <MudText Typo="Typo.caption" Class="mt-1">@file.OriginalFileName</MudText>
                                     <MudStack Row="true" Spacing="1" Class="mt-1">
-                                        <MudLink Href="@file.Url" Target="_blank">Preuzmi</MudLink>
+                                        <MudLink Href="@ResolveFileUrl(file.Url)" Target="_blank">Preuzmi</MudLink>
                                         <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                        Size="Size.Small"
                                                        Color="Color.Error"
@@ -203,6 +203,13 @@ else
     private string? uploadError;
 
     protected override async Task OnInitializedAsync() => await LoadProfile();
+
+    // Http.BaseAddress pokazuje na Api (npr. https://localhost:7062/).
+    // file.Url iz backenda je relativan ("/uploads/equipment/xxx.png"), pa ga ovdje
+    // pretvaramo u apsolutan URL - inace <img src> pokusava dohvatiti sliku
+    // s adrese App projekta (gdje slika ne postoji), a ne s Api-ja.
+    private string ResolveFileUrl(string relativeUrl)
+        => new Uri(Http.BaseAddress!, relativeUrl).ToString();
 
     private async Task LoadProfile()
     {
